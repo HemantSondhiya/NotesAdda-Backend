@@ -25,14 +25,14 @@ public class Branch {
     @Column(nullable = false, length = 20)
     private String code;
 
-    // Many Branches → 1 College
+    // Many Branches → 1 Program
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "college_id", nullable = false)
+    @JoinColumn(name = "program_id", nullable = false)
     @ToString.Exclude
-    private College college;
+    private Program program;
 
-    // 1 Branch → Many Programs
+    // 1 Branch → Many Semesters
     @OneToMany(mappedBy = "branch", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<Program> programs = new ArrayList<>();
+    private List<Semester> semesters = new ArrayList<>();
 }

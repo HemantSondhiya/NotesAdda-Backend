@@ -40,8 +40,8 @@ public class College {
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // 1 College → Many Branches
+    // 1 College → Many Program
     @OneToMany(mappedBy = "college", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<Branch> branches = new ArrayList<>();
+    private List<Program> programs = new ArrayList<>();
 }

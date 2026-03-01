@@ -22,11 +22,11 @@ public class Semester {
     @Column(nullable = false)
     private Short number; // 1 to 8
 
-    // Many Semesters → 1 Program
+    // Many Semesters → 1 Branch
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "program_id", nullable = false)
+    @JoinColumn(name = "branch_id", nullable = false)
     @ToString.Exclude
-    private Program program;
+    private Branch branch;
 
     // 1 Semester → Many Subjects
     @OneToMany(mappedBy = "semester", cascade = CascadeType.ALL, orphanRemoval = true)

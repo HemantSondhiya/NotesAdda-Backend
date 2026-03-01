@@ -2,6 +2,7 @@ package com.example.NotsHub.payload;
 
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -17,4 +18,5 @@ public class CollegeDTO {
     private String logoUrl;
     private Boolean isActive;
     private LocalDateTime createdAt;
+    private List<ProgramDTO> programs;
 }
