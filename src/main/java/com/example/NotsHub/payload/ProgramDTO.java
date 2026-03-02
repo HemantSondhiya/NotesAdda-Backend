@@ -1,6 +1,7 @@
 package com.example.NotsHub.payload;
 
 import lombok.*;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -11,9 +12,8 @@ import java.util.UUID;
 public class ProgramDTO {
     private UUID id;
     private String name;
-    private String type; // UG | PG | DIPLOMA
+    private String type;
     private Short duration;
-    private UUID collegeId;
+    private UUID universityId;
     private List<BranchDTO> branches;
 }
-

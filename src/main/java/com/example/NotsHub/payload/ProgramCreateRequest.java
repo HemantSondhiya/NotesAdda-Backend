@@ -3,6 +3,7 @@ package com.example.NotsHub.payload;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
 import java.util.UUID;
 
 @Data
@@ -12,12 +13,11 @@ public class ProgramCreateRequest {
     private String name;
 
     @NotBlank(message = "Program type is required")
-    private String type; // UG | PG | DIPLOMA
+    private String type;
 
     @NotNull(message = "Duration is required")
     private Short duration;
 
-    @NotNull(message = "College ID is required")
-    private UUID collegeId;
+    @NotNull(message = "University ID is required")
+    private UUID universityId;
 }
-

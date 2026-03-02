@@ -1,7 +1,8 @@
 package com.example.NotsHub.security;
 
-import com.example.NotsHub.Repository.RoleRepository;
-import com.example.NotsHub.Repository.UserRepository;
+import com.example.NotsHub.security.jwt.AuthEntryPointJwt;
+import com.example.NotsHub.security.jwt.AuthTokenFilter;
+import com.example.NotsHub.security.services.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,20 +13,15 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.example.NotsHub.security.jwt.AuthEntryPointJwt;
-import com.example.NotsHub.security.jwt.AuthTokenFilter;
-import com.example.NotsHub.security.services.UserDetailsServiceImpl;
-
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity   // ← enables @PreAuthorize in controllers
+@EnableMethodSecurity
 public class WebSecurityConfig {
 
     @Autowired
@@ -62,37 +58,30 @@ public class WebSecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {})
+                .cors(cors -> {
+                })
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-
-                        // ── Public endpoints ─────────────────────────
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/api/colleges/**").permitAll()  // GET colleges public
-
-                        // ── Swagger / Docs ───────────────────────────
+                        .requestMatchers(HttpMethod.GET, "/api/universities/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/programs/**").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
+                        .requestMatchers("/v2/api-docs").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
-
-                        // ── H2 console (dev only) ────────────────────
+                        .requestMatchers("/swagger-resources/**").permitAll()
+                        .requestMatchers("/configuration/ui").permitAll()
+                        .requestMatchers("/configuration/security").permitAll()
+                        .requestMatchers("/webjars/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
-
-                        // ── Static files ─────────────────────────────
                         .requestMatchers("/images/**").permitAll()
-
-                        // ── Role based ───────────────────────────────
                         .requestMatchers("/api/admin/**")
-                        .hasAnyRole("COLLEGE_ADMIN", "SUPER_ADMIN")
-
-                        // ── OPTIONS preflight ────────────────────────
+                        .hasAnyRole("UNIVERSITY_ADMIN", "SUPER_ADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // ── Everything else needs login ──────────────
                         .anyRequest().authenticated()
                 );
 
@@ -103,17 +92,5 @@ public class WebSecurityConfig {
                 .frameOptions(frameOptions -> frameOptions.sameOrigin()));
 
         return http.build();
-    }
-
-    @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web -> web.ignoring().requestMatchers(
-                "/v2/api-docs",
-                "/configuration/ui",
-                "/swagger-resources/**",
-                "/configuration/security",
-                "/swagger-ui.html",
-                "/webjars/**"
-        ));
     }
 }

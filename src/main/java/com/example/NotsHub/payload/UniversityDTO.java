@@ -1,15 +1,16 @@
 package com.example.NotsHub.payload;
 
 import lombok.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-@Data
 @Builder
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CollegeDTO {
+public class UniversityDTO {
     private UUID id;
     private String name;
     private String code;

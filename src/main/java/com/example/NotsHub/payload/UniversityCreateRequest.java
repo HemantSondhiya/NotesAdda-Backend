@@ -5,12 +5,12 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class CollegeCreateRequest {
+public class UniversityCreateRequest {
 
-    @NotBlank(message = "College name is required")
+    @NotBlank(message = "University name is required")
     private String name;
 
-    @NotBlank(message = "College code is required")
+    @NotBlank(message = "University code is required")
     @Size(max = 20, message = "Code must be under 20 characters")
     private String code;
 

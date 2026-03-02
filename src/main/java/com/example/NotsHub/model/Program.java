@@ -1,16 +1,15 @@
 package com.example.NotsHub.model;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(name = "programs")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -18,25 +17,24 @@ public class Program {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @Column(nullable = false, length = 100)
-    private String name; // BTech, MCA, MBA, BCA
+    private String name;
 
     @Column(nullable = false, length = 20)
-    private String type; // UG | PG | DIPLOMA
+    private String type;
 
-    private Short duration; // years
+    private Short duration;
 
-    // Many Programs → 1 College
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "college_id", nullable = false)
+    @JoinColumn(name = "university_id", nullable = false)
     @ToString.Exclude
-    private College college;
+    private University university;
 
-    // 1 Program → Many Branches
-    @OneToMany(mappedBy = "program", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "program", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<Branch> branches = new ArrayList<>();
+    private Set<Branch> branches = new HashSet<>();
 }
-

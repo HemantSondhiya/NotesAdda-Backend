@@ -20,7 +20,7 @@ public class NotesDTO {
     private LocalDateTime createdAt;
     private LocalDateTime approvedAt;
     private UUID subjectId;
-    private UUID uploadedById;
-    private UUID approvedById;
+    private Long uploadedById;
+    private Long approvedById;
 }
 

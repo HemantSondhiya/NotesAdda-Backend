@@ -1,0 +1,57 @@
+package com.example.NotsHub.controller;
+
+import com.example.NotsHub.payload.APIResponse;
+import com.example.NotsHub.payload.PagedResponse;
+import com.example.NotsHub.payload.SubjectCreateRequest;
+import com.example.NotsHub.payload.SubjectDTO;
+import com.example.NotsHub.service.SubjectService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/subjects")
+public class SubjectController {
+
+    @Autowired
+    private SubjectService subjectService;
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> createSubject(@Valid @RequestBody SubjectCreateRequest request) {
+        SubjectDTO subjectDTO = subjectService.createSubject(request);
+        return ResponseEntity.ok(new APIResponse<>("Subject created successfully", true, subjectDTO));
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getSubjects(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ){
+        Page<SubjectDTO> subjects = subjectService.getSubjects(page, size);
+        return ResponseEntity.ok(new APIResponse<>("Subjects retrieved successfully", true, PagedResponse.from(subjects)));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getSubjectById(@PathVariable UUID id) {
+        SubjectDTO subject = subjectService.getSubjectById(id);
+        return ResponseEntity.ok(new APIResponse<>("Subject retrieved successfully", true, subject));
+    }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> deleteSubject(@PathVariable UUID id) {
+        subjectService.deleteSubject(id);
+        return ResponseEntity.ok(new APIResponse<>("Subject deleted successfully", true, null));
+    }
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> updateSubject(@PathVariable UUID id, @Valid @RequestBody SubjectCreateRequest request) {
+        SubjectDTO subject = subjectService.updateSubject(id, request);
+        return ResponseEntity.ok(new APIResponse<>("Subject updated successfully", true, subject));
+    }
+}

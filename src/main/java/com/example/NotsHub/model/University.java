@@ -9,15 +9,18 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "colleges")
-@Data
+@Table(name = "universities")
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class College {
+public class University {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @Column(nullable = false, length = 200)
@@ -40,8 +43,7 @@ public class College {
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // 1 College → Many Program
-    @OneToMany(mappedBy = "college", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "university", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Program> programs = new ArrayList<>();
 }

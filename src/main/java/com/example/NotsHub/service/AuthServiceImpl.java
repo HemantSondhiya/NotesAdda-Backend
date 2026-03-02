@@ -94,7 +94,6 @@ public class AuthServiceImpl implements AuthService {
         Set<Role> roles = new HashSet<>();
 
         if (strRoles == null) {
-            // ── default → STUDENT ────────────────────────────────
             Role studentRole = roleRepository.findByRoleName(AppRole.ROLE_STUDENT)
                     .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
             roles.add(studentRole);
@@ -107,10 +106,10 @@ public class AuthServiceImpl implements AuthService {
                         roles.add(superAdminRole);
                         break;
 
-                    case "college_admin":
-                        Role collegeAdminRole = roleRepository.findByRoleName(AppRole.ROLE_COLLEGE_ADMIN)
+                    case "university_admin":
+                        Role universityAdminRole = roleRepository.findByRoleName(AppRole.ROLE_UNIVERSITY_ADMIN)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(collegeAdminRole);
+                        roles.add(universityAdminRole);
                         break;
 
                     case "faculty":
@@ -120,7 +119,6 @@ public class AuthServiceImpl implements AuthService {
                         break;
 
                     default:
-                        // ── anything else → STUDENT ──────────────
                         Role studentRole = roleRepository.findByRoleName(AppRole.ROLE_STUDENT)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
                         roles.add(studentRole);
