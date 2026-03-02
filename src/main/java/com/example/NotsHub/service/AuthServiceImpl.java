@@ -14,20 +14,21 @@ import com.example.NotsHub.security.response.UserInfoResponse;
 import com.example.NotsHub.security.services.UserDetailsImpl;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,9 +49,6 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     PasswordEncoder encoder;
-
-    @Autowired
-    ModelMapper modelMapper;
 
     @Override
     public AuthenticationResult login(LoginRequest loginRequest) {
@@ -90,61 +88,47 @@ public class AuthServiceImpl implements AuthService {
                 signUpRequest.getEmail(),
                 encoder.encode(signUpRequest.getPassword()));
 
-        Set<String> strRoles = signUpRequest.getRole();
-        Set<Role> roles = new HashSet<>();
-
-        if (strRoles == null) {
-            Role studentRole = roleRepository.findByRoleName(AppRole.ROLE_STUDENT)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-            roles.add(studentRole);
-        } else {
-            strRoles.forEach(role -> {
-                switch (role) {
-                    case "super_admin":
-                        Role superAdminRole = roleRepository.findByRoleName(AppRole.ROLE_SUPER_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(superAdminRole);
-                        break;
-
-                    case "university_admin":
-                        Role universityAdminRole = roleRepository.findByRoleName(AppRole.ROLE_UNIVERSITY_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(universityAdminRole);
-                        break;
-
-                    case "faculty":
-                        Role facultyRole = roleRepository.findByRoleName(AppRole.ROLE_FACULTY)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(facultyRole);
-                        break;
-
-                    default:
-                        Role studentRole = roleRepository.findByRoleName(AppRole.ROLE_STUDENT)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(studentRole);
-                }
-            });
-        }
-
-        user.setRoles(roles);
+        Role studentRole = roleRepository.findByRoleName(AppRole.ROLE_STUDENT)
+                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+        user.getRoles().add(studentRole);
         userRepository.save(user);
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 
     @Override
     public UserInfoResponse getCurrentUserDetails(Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .collect(Collectors.toList());
-
-        return new UserInfoResponse(userDetails.getId(),
-                userDetails.getUsername(), roles);
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserDetailsImpl userDetails) {
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
+            return new UserInfoResponse(userDetails.getId(), userDetails.getUsername(), roles);
+        }
+        if (principal instanceof UserDetails userDetails) {
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
+            return new UserInfoResponse(null, userDetails.getUsername(), roles);
+        }
+        return new UserInfoResponse(null, authentication.getName(), List.of());
     }
 
     @Override
     public ResponseCookie logoutUser() {
         return jwtUtils.getCleanJwtCookie();
+    }
+
+    @Override
+    public Page<UserInfoResponse> getAllUsers(int page, int size) {
+        return userRepository.findAll(PageRequest.of(page, size))
+                .map(user -> new UserInfoResponse(
+                        user.getUserId(),
+                        user.getUserName(),
+                        user.getRoles().stream()
+                                .map(role -> role.getRoleName().name())
+                                .collect(Collectors.toList()),
+                        user.getEmail(),
+                        null
+                ));
     }
 }

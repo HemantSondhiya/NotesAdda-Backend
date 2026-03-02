@@ -2,15 +2,20 @@ package com.example.NotsHub.controller;
 
 
 import com.example.NotsHub.payload.AuthenticationResult;
+import com.example.NotsHub.payload.APIResponse;
+import com.example.NotsHub.payload.PagedResponse;
+import com.example.NotsHub.security.response.UserInfoResponse;
 import com.example.NotsHub.security.request.LoginRequest;
 import com.example.NotsHub.security.request.SignupRequest;
 import com.example.NotsHub.security.response.MessageResponse;
 import com.example.NotsHub.service.AuthService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,6 +40,7 @@ public class AuthController {
     }
 
     @GetMapping("/username")
+    @PreAuthorize("isAuthenticated()")
     public String currentUserName(Authentication authentication){
         if (authentication != null)
             return authentication.getName();
@@ -44,6 +50,7 @@ public class AuthController {
 
 
     @GetMapping("/user")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getUserDetails(Authentication authentication){
         return ResponseEntity.ok().body(authService.getCurrentUserDetails(authentication));
     }
@@ -54,6 +61,13 @@ public class AuthController {
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE,
                         cookie.toString())
                 .body(new MessageResponse("You've been signed out!"));
+    }
+    @GetMapping("/users")
+    @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> getAllUsers(@RequestParam(defaultValue = "0") int page,
+                                         @RequestParam(defaultValue = "20") int size){
+        Page<UserInfoResponse> users = authService.getAllUsers(page, size);
+        return ResponseEntity.ok(new APIResponse<>("Users retrieved successfully", true, PagedResponse.from(users)));
     }
 
 

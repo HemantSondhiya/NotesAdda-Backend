@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Sensitive local runtime files
+.env
+.env.*
+!.env.example
+*.p12

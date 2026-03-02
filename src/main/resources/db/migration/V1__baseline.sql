@@ -1,0 +1,3 @@
+-- Baseline migration.
+-- Existing environments are expected to use spring.flyway.baseline-on-migrate=true.
+-- Future schema changes must be added in new versioned migrations (V2__, V3__, ...).

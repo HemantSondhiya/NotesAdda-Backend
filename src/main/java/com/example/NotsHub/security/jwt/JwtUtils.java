@@ -4,6 +4,7 @@ import com.example.NotsHub.security.services.UserDetailsImpl;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -36,6 +37,18 @@ public class JwtUtils {
 
     @Value("${JWT_COOKIE_SECURE:false}")
     private boolean secure;
+
+    @PostConstruct
+    public void validateConfiguration() {
+        try {
+            byte[] decodedKey = Decoders.BASE64.decode(jwtSecret);
+            if (decodedKey.length < 32) {
+                throw new IllegalStateException("JWT secret must be a Base64 string with at least 32 bytes");
+            }
+        } catch (Exception ex) {
+            throw new IllegalStateException("Invalid JWT_SECRET configuration. Provide a valid Base64 secret.", ex);
+        }
+    }
 
     public String getJwtFromCookies(HttpServletRequest request) {
         Cookie cookie = WebUtils.getCookie(request, jwtCookie);
@@ -70,6 +83,10 @@ public class JwtUtils {
     public ResponseCookie getCleanJwtCookie() {
         ResponseCookie cookie = ResponseCookie.from(jwtCookie, null)
                 .path("/api")
+                .maxAge(0)
+                .httpOnly(httpOnly)
+                .secure(secure)
+                .sameSite("Strict")
                 .build();
         return cookie;
     }
@@ -98,6 +115,8 @@ public class JwtUtils {
         try {
             Jwts.parser().verifyWith((SecretKey) key()).build().parseSignedClaims(authToken);
             return true;
+        } catch (io.jsonwebtoken.security.SignatureException e) {
+            logger.warn("JWT signature validation failed");
         } catch (MalformedJwtException e) {
             logger.error("Invalid JWT token: {}", e.getMessage());
         } catch (ExpiredJwtException e) {

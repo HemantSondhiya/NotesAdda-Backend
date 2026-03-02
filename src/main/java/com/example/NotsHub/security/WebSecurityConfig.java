@@ -29,6 +29,8 @@ public class WebSecurityConfig {
 
     @Autowired
     private AuthEntryPointJwt unauthorizedHandler;
+    @Autowired
+    private RateLimitFilter rateLimitFilter;
 
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {
@@ -65,10 +67,16 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET, "/api/auth/users").hasAnyRole("UNIVERSITY_ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/auth/user").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/username").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/universities/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/programs/**").permitAll()
+                        .requestMatchers("/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").hasAnyRole("UNIVERSITY_ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/v2/api-docs").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
@@ -86,6 +94,7 @@ public class WebSecurityConfig {
                 );
 
         http.authenticationProvider(authenticationProvider());
+        http.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(authenticationJwtTokenFilter(),
                 UsernamePasswordAuthenticationFilter.class);
         http.headers(headers -> headers
