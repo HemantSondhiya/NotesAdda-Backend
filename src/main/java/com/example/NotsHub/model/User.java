@@ -5,11 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
-import org.springframework.boot.autoconfigure.amqp.RabbitConnectionDetails;
-
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -42,6 +38,9 @@ public class User {
     @Size(max = 120)
     @Column(name = "password")
     private String password;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
 
     public User(String userName, String email, String password) {
         this.userName = userName;

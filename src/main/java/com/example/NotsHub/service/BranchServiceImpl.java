@@ -13,6 +13,7 @@ import com.example.NotsHub.payload.SemesterDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -103,8 +104,20 @@ public class BranchServiceImpl implements BranchService {
 
     @Override
     public Page<BranchDTO> getAllBranches(int page, int size) {
-        Page<Branch> branchPage = branchRepository.findAll(PageRequest.of(page, size));
+        Page<Branch> branchPage = branchRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")));
         return branchPage.map(this::mapToDTO);
+    }
+
+    @Override
+    public Page<BranchDTO> getBranchesByProgram(UUID programId, int page, int size) {
+        if (!programRepository.existsById(programId)) {
+            throw new APIException("Program not found with id: " + programId);
+        }
+        Page<Branch> branchPage = branchRepository.findByProgramId(
+                programId,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"))
+        );
+        return branchPage.map(this::mapToSummaryDTO);
     }
 
     // ================= BRANCH → DTO =================
@@ -145,6 +158,16 @@ public class BranchServiceImpl implements BranchService {
         // Avoid infinite recursion (Semester -> Subject -> Semester)
         dto.setSubjects(new ArrayList<>());
 
+        return dto;
+    }
+
+    private BranchDTO mapToSummaryDTO(Branch branch) {
+        BranchDTO dto = new BranchDTO();
+        dto.setId(branch.getId());
+        dto.setName(branch.getName());
+        dto.setCode(branch.getCode());
+        dto.setProgramId(branch.getProgram().getId());
+        dto.setSemesters(new ArrayList<>());
         return dto;
     }
 }

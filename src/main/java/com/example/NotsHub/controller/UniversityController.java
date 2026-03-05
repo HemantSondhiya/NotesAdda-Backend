@@ -4,6 +4,8 @@ import com.example.NotsHub.payload.APIResponse;
 import com.example.NotsHub.payload.PagedResponse;
 import com.example.NotsHub.payload.UniversityCreateRequest;
 import com.example.NotsHub.payload.UniversityDTO;
+import com.example.NotsHub.payload.ProgramDTO;
+import com.example.NotsHub.service.ProgramService;
 import com.example.NotsHub.service.UniversityService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,8 @@ import java.util.UUID;
 public class UniversityController {
     @Autowired
     private UniversityService universityService;
+    @Autowired
+    private ProgramService programService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
@@ -37,6 +41,17 @@ public class UniversityController {
         Page<UniversityDTO> universities = universityService.getAllUniversities(page, size);
         return ResponseEntity.status(HttpStatus.OK).body(
                 new APIResponse("Universities", true, PagedResponse.from(universities))
+        );
+    }
+
+    @GetMapping("/{id}/programs")
+    public ResponseEntity<?> getProgramsByUniversity(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<ProgramDTO> programs = programService.getProgramsByUniversity(id, page, size);
+        return ResponseEntity.ok(
+                new APIResponse("Programs retrieved successfully for university", true, PagedResponse.from(programs))
         );
     }
 

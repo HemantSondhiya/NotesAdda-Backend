@@ -14,6 +14,8 @@ public class UniversityCreateRequest {
     @Size(max = 20, message = "Code must be under 20 characters")
     private String code;
 
+    private String description;
+
     private String city;
     private String state;
     private String logoUrl;

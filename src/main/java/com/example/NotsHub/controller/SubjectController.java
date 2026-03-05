@@ -1,9 +1,11 @@
 package com.example.NotsHub.controller;
 
 import com.example.NotsHub.payload.APIResponse;
+import com.example.NotsHub.payload.NotesDTO;
 import com.example.NotsHub.payload.PagedResponse;
 import com.example.NotsHub.payload.SubjectCreateRequest;
 import com.example.NotsHub.payload.SubjectDTO;
+import com.example.NotsHub.service.NotesService;
 import com.example.NotsHub.service.SubjectService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,8 @@ public class SubjectController {
 
     @Autowired
     private SubjectService subjectService;
+    @Autowired
+    private NotesService notesService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
@@ -41,6 +45,15 @@ public class SubjectController {
     public ResponseEntity<?> getSubjectById(@PathVariable UUID id) {
         SubjectDTO subject = subjectService.getSubjectById(id);
         return ResponseEntity.ok(new APIResponse<>("Subject retrieved successfully", true, subject));
+    }
+
+    @GetMapping("/{id}/notes")
+    public ResponseEntity<?> getNotesBySubject(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<NotesDTO> notes = notesService.getNotesBySubject(id, page, size);
+        return ResponseEntity.ok(new APIResponse<>("Notes retrieved successfully for subject", true, PagedResponse.from(notes)));
     }
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")

@@ -4,6 +4,8 @@ import com.example.NotsHub.payload.APIResponse;
 import com.example.NotsHub.payload.PagedResponse;
 import com.example.NotsHub.payload.ProgramCreateRequest;
 import com.example.NotsHub.payload.ProgramDTO;
+import com.example.NotsHub.payload.BranchDTO;
+import com.example.NotsHub.service.BranchService;
 import com.example.NotsHub.service.ProgramService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,8 @@ public class ProgramController {
 
     @Autowired
     private ProgramService programService;
+    @Autowired
+    private BranchService branchService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
@@ -47,14 +51,15 @@ public class ProgramController {
                 new APIResponse("Program retrieved successfully", true, program));
     }
 
-    @GetMapping("/university/{universityId}")
-    public ResponseEntity<?> getProgramsByUniversity(
-            @PathVariable UUID universityId,
+    @GetMapping("/{id}/branches")
+    public ResponseEntity<?> getBranchesByProgram(
+            @PathVariable UUID id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<ProgramDTO> programs = programService.getProgramsByUniversity(universityId, page, size);
+        Page<BranchDTO> branches = branchService.getBranchesByProgram(id, page, size);
         return ResponseEntity.ok(
-                new APIResponse("Programs retrieved successfully for university", true, PagedResponse.from(programs)));
+                new APIResponse("Branches retrieved successfully for program", true, PagedResponse.from(branches))
+        );
     }
 
     @PutMapping("/{id}")

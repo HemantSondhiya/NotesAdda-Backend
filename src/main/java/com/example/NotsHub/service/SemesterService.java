@@ -11,6 +11,7 @@ public interface SemesterService {
     SemesterDTO createSemester(@Valid SemesterCreateRequest request);
 
     Page<SemesterDTO> getAllSemester(int page, int size);
+    Page<SemesterDTO> getSemestersByBranch(UUID branchId, int page, int size);
 
     void deleteSemester(UUID id);
 

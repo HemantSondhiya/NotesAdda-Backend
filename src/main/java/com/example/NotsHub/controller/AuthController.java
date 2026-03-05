@@ -6,7 +6,9 @@ import com.example.NotsHub.payload.APIResponse;
 import com.example.NotsHub.payload.PagedResponse;
 import com.example.NotsHub.security.response.UserInfoResponse;
 import com.example.NotsHub.security.request.LoginRequest;
+import com.example.NotsHub.security.request.ResendEmailOtpRequest;
 import com.example.NotsHub.security.request.SignupRequest;
+import com.example.NotsHub.security.request.VerifyEmailOtpRequest;
 import com.example.NotsHub.security.response.MessageResponse;
 import com.example.NotsHub.service.AuthService;
 import jakarta.validation.Valid;
@@ -37,6 +39,16 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         return authService.register(signUpRequest);
+    }
+
+    @PostMapping("/verify-email-otp")
+    public ResponseEntity<?> verifyEmailOtp(@Valid @RequestBody VerifyEmailOtpRequest request) {
+        return authService.verifyEmailOtp(request);
+    }
+
+    @PostMapping("/resend-email-otp")
+    public ResponseEntity<?> resendEmailOtp(@Valid @RequestBody ResendEmailOtpRequest request) {
+        return authService.resendEmailOtp(request);
     }
 
     @GetMapping("/username")

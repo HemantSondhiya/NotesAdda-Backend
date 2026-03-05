@@ -4,7 +4,11 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -28,16 +32,28 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Map<String, Counter> counters = new ConcurrentHashMap<>();
     private final AtomicLong requestCount = new AtomicLong(0);
 
+    @Value("${app.security.trust-forward-headers:false}")
+    private boolean trustForwardHeaders;
+
+    @Value("${app.security.rate-limit.enabled:true}")
+    private boolean rateLimitEnabled;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        if (!rateLimitEnabled) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String path = request.getRequestURI();
         String method = request.getMethod();
 
         int limit = 0;
         if ("POST".equalsIgnoreCase(method) && "/api/auth/signin".equals(path)) {
             limit = SIGNIN_LIMIT;
-        } else if ("POST".equalsIgnoreCase(method) && "/api/notes".equals(path)) {
+        } else if ("POST".equalsIgnoreCase(method) &&
+                ("/api/notes".equals(path) || "/api/notes/upload".equals(path))) {
             limit = NOTES_UPLOAD_LIMIT;
         }
 
@@ -95,9 +111,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String extractClientKey(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)) {
+            return "user:" + authentication.getName();
+        }
+
+        if (trustForwardHeaders) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
+            String realIp = request.getHeader("X-Real-IP");
+            if (realIp != null && !realIp.isBlank()) {
+                return realIp.trim();
+            }
         }
         return request.getRemoteAddr();
     }

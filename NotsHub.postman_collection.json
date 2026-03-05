@@ -1,0 +1,584 @@
+{
+    "info":  {
+                 "_postman_id":  "f8910f08-7da1-4df1-a9e2-6d377924b1ab",
+                 "name":  "NotsHub Full API Collection",
+                 "description":  "Import and run. Set variables first. Flow: signup -\u003e verify otp -\u003e signin -\u003e create university -\u003e program -\u003e branch -\u003e semester -\u003e subject -\u003e notes.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+                     {
+                         "key":  "baseUrl",
+                         "value":  "http://localhost:9091"
+                     },
+                     {
+                         "key":  "username",
+                         "value":  "testuser1"
+                     },
+                     {
+                         "key":  "password",
+                         "value":  "Test@12345"
+                     },
+                     {
+                         "key":  "email",
+                         "value":  "testuser1@example.com"
+                     },
+                     {
+                         "key":  "otp",
+                         "value":  "123456"
+                     },
+                     {
+                         "key":  "universityId",
+                         "value":  "00000000-0000-0000-0000-000000000001"
+                     },
+                     {
+                         "key":  "programId",
+                         "value":  "00000000-0000-0000-0000-000000000002"
+                     },
+                     {
+                         "key":  "branchId",
+                         "value":  "00000000-0000-0000-0000-000000000003"
+                     },
+                     {
+                         "key":  "semesterId",
+                         "value":  "00000000-0000-0000-0000-000000000004"
+                     },
+                     {
+                         "key":  "subjectId",
+                         "value":  "00000000-0000-0000-0000-000000000005"
+                     },
+                     {
+                         "key":  "notesId",
+                         "value":  "00000000-0000-0000-0000-000000000006"
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "Auth",
+                     "item":  [
+                                  {
+                                      "name":  "Signup",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"{{username}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/auth/signup"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Verify Email OTP",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"{{email}}\",\n  \"otp\": \"{{otp}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/auth/verify-email-otp"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Resend Email OTP",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"{{email}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/auth/resend-email-otp"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Signin",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/auth/signin"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Current Username",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/auth/username"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Current User Details",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/auth/user"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Users (Admin)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/auth/users?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Signout",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "url":  "{{baseUrl}}/api/auth/signout"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Universities",
+                     "item":  [
+                                  {
+                                      "name":  "Create University",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                "raw":  "{\n  \"name\": \"Delhi Technical University\",\n  \"code\": \"DTU\",\n  \"description\": \"Premier engineering university in Delhi\",\n  \"city\": \"Delhi\",\n  \"state\": \"Delhi\",\n  \"logoUrl\": \"https://example.com/dtu-logo.png\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/universities"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Universities",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/universities?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Programs by University (Nested)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/universities/{{universityId}}/programs?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Update University",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                "raw":  "{\n  \"name\": \"Delhi Technical University Updated\",\n  \"code\": \"DTU\",\n  \"description\": \"Updated profile for the university\",\n  \"city\": \"Delhi\",\n  \"state\": \"Delhi\",\n  \"logoUrl\": \"https://example.com/dtu-logo-new.png\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/universities/{{universityId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete University",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{baseUrl}}/api/universities/{{universityId}}"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Programs",
+                     "item":  [
+                                  {
+                                      "name":  "Create Program",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                "raw":  "{\n  \"name\": \"B.Tech CSE\",\n  \"description\": \"Undergraduate program focused on computer science fundamentals\",\n  \"type\": \"UNDERGRADUATE\",\n  \"duration\": 4,\n  \"universityId\": \"{{universityId}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/programs"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Programs",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/programs?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Program by Id",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/programs/{{programId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Branches by Program (Nested)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/programs/{{programId}}/branches?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Update Program",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                "raw":  "{\n  \"name\": \"B.Tech AI\",\n  \"description\": \"Undergraduate program focused on artificial intelligence\",\n  \"type\": \"UNDERGRADUATE\",\n  \"duration\": 4,\n  \"universityId\": \"{{universityId}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/programs/{{programId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete Program",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{baseUrl}}/api/programs/{{programId}}"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Branches",
+                     "item":  [
+                                  {
+                                      "name":  "Create Branch",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"name\": \"Computer Science\",\n  \"code\": \"CSE\",\n  \"programId\": \"{{programId}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/branches"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Branches",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/branches?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Branch by Id",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/branches/{{branchId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Semesters by Branch (Nested)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/branches/{{branchId}}/semesters?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Update Branch",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"name\": \"Computer Science and Engineering\",\n  \"code\": \"CSE\",\n  \"programId\": \"{{programId}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/branches/{{branchId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete Branch",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{baseUrl}}/api/branches/{{branchId}}"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Semesters",
+                     "item":  [
+                                  {
+                                      "name":  "Create Semester",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"number\": 1,\n  \"branchId\": \"{{branchId}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/semesters"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Semesters",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/semesters?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Subjects by Semester (Nested)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/semesters/{{semesterId}}/subjects?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Update Semester",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"number\": 2,\n  \"branchId\": \"{{branchId}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/semesters/{{semesterId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete Semester",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{baseUrl}}/api/semesters/{{semesterId}}"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Subjects",
+                     "item":  [
+                                  {
+                                      "name":  "Create Subject",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"name\": \"Data Structures\",\n  \"code\": \"CS201\",\n  \"credits\": 4,\n  \"syllabusUrl\": \"https://example.com/syllabus/cs201\",\n  \"semesterId\": \"{{semesterId}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/subjects"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Subjects",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/subjects?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Subject by Id",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/subjects/{{subjectId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Notes by Subject (Nested)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/subjects/{{subjectId}}/notes?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Update Subject",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"name\": \"Advanced Data Structures\",\n  \"code\": \"CS301\",\n  \"credits\": 4,\n  \"syllabusUrl\": \"https://example.com/syllabus/cs301\",\n  \"semesterId\": \"{{semesterId}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/subjects/{{subjectId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete Subject",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{baseUrl}}/api/subjects/{{subjectId}}"
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Notes",
+                     "item":  [
+                                  {
+                                      "name":  "Create Notes (JSON)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"title\": \"DSA Unit 1 Notes\",\n  \"description\": \"Introduction and complexity analysis\",\n  \"fileUrl\": \"https://example.com/files/dsa-unit-1.pdf\",\n  \"fileKey\": \"notes/dsa-unit-1.pdf\",\n  \"fileType\": \"PDF\",\n  \"subjectId\": \"{{subjectId}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/notes"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Upload Notes PDF (multipart)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "body":  {
+                                                                   "mode":  "formdata",
+                                                                   "formdata":  [
+                                                                                    {
+                                                                                        "key":  "title",
+                                                                                        "value":  "DSA PDF Upload",
+                                                                                        "type":  "text"
+                                                                                    },
+                                                                                    {
+                                                                                        "key":  "description",
+                                                                                        "value":  "Uploaded from Postman",
+                                                                                        "type":  "text"
+                                                                                    },
+                                                                                    {
+                                                                                        "key":  "subjectId",
+                                                                                        "value":  "{{subjectId}}",
+                                                                                        "type":  "text"
+                                                                                    },
+                                                                                    {
+                                                                                        "key":  "file",
+                                                                                        "type":  "file",
+                                                                                        "src":  ""
+                                                                                    }
+                                                                                ]
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/notes/upload"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Notes",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/notes?page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Search Notes",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/notes/search?q=dsa\u0026page=0\u0026size=20"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Get Download Link",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/api/notes/{{notesId}}/download"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Approve Notes",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "url":  "{{baseUrl}}/api/notes/{{notesId}}/approve"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Update Notes",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"title\": \"DSA Unit 1 Notes - Revised\",\n  \"description\": \"Updated notes\",\n  \"fileUrl\": \"https://example.com/files/dsa-unit-1-rev.pdf\",\n  \"fileKey\": \"notes/dsa-unit-1-rev.pdf\",\n  \"fileType\": \"PDF\",\n  \"subjectId\": \"{{subjectId}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/api/notes/{{notesId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Delete Notes",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "url":  "{{baseUrl}}/api/notes/{{notesId}}"
+                                                  }
+                                  }
+                              ]
+                 }
+             ]
+}

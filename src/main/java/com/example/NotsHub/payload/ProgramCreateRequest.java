@@ -12,6 +12,8 @@ public class ProgramCreateRequest {
     @NotBlank(message = "Program name is required")
     private String name;
 
+    private String description;
+
     @NotBlank(message = "Program type is required")
     private String type;
 

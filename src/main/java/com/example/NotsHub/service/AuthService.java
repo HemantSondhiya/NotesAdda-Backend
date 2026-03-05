@@ -3,7 +3,9 @@ package com.example.NotsHub.service;
 
 import com.example.NotsHub.payload.AuthenticationResult;
 import com.example.NotsHub.security.request.LoginRequest;
+import com.example.NotsHub.security.request.ResendEmailOtpRequest;
 import com.example.NotsHub.security.response.MessageResponse;
+import com.example.NotsHub.security.request.VerifyEmailOtpRequest;
 import com.example.NotsHub.security.response.UserInfoResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -16,6 +18,10 @@ public interface AuthService {
     AuthenticationResult login(LoginRequest loginRequest);
 
     ResponseEntity<MessageResponse> register(com.example.NotsHub.security.request.@Valid SignupRequest signUpRequest);
+
+    ResponseEntity<MessageResponse> verifyEmailOtp(VerifyEmailOtpRequest request);
+
+    ResponseEntity<MessageResponse> resendEmailOtp(ResendEmailOtpRequest request);
 
     UserInfoResponse getCurrentUserDetails(Authentication authentication);
 

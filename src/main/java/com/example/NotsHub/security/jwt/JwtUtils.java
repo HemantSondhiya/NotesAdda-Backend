@@ -27,7 +27,7 @@ public class JwtUtils {
     private String jwtSecret;
 
     @Value("${spring.app.jwtExpirationMs}")
-    private int jwtExpirationMs;
+    private long jwtExpirationMs;
 
     @Value("${spring.ecom.app.jwtCookieName}")
     private String jwtCookie;
@@ -38,6 +38,12 @@ public class JwtUtils {
     @Value("${JWT_COOKIE_SECURE:false}")
     private boolean secure;
 
+    @Value("${ENVIRONMENT:development}")
+    private String environment;
+
+    @Value("${JWT_COOKIE_SAME_SITE:None}")
+    private String sameSite;
+
     @PostConstruct
     public void validateConfiguration() {
         try {
@@ -47,6 +53,14 @@ public class JwtUtils {
             }
         } catch (Exception ex) {
             throw new IllegalStateException("Invalid JWT_SECRET configuration. Provide a valid Base64 secret.", ex);
+        }
+
+        boolean production = "production".equalsIgnoreCase(environment);
+        if (production && !secure) {
+            throw new IllegalStateException("JWT_COOKIE_SECURE must be true in production");
+        }
+        if ("None".equalsIgnoreCase(sameSite) && !secure) {
+            throw new IllegalStateException("JWT_COOKIE_SECURE must be true when JWT_COOKIE_SAME_SITE=None");
         }
     }
 
@@ -75,7 +89,7 @@ public class JwtUtils {
                 .maxAge(24 * 60 * 60)
                 .httpOnly(httpOnly)
                 .secure(secure)
-                .sameSite("Strict")
+                .sameSite(sameSite)
                 .build();
         return cookie;
     }
@@ -86,7 +100,7 @@ public class JwtUtils {
                 .maxAge(0)
                 .httpOnly(httpOnly)
                 .secure(secure)
-                .sameSite("Strict")
+                .sameSite(sameSite)
                 .build();
         return cookie;
     }

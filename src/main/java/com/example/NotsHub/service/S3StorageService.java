@@ -1,0 +1,151 @@
+package com.example.NotsHub.service;
+
+import com.example.NotsHub.exceptions.APIException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.UUID;
+
+@Service
+public class S3StorageService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3StorageService.class);
+    private static final long MAX_PDF_SIZE_BYTES = 10L * 1024L * 1024L;
+
+    private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
+    private final String bucketName;
+    private final int presignedExpiryMinutes;
+
+    public S3StorageService(
+            S3Client s3Client,
+            S3Presigner s3Presigner,
+            @Value("${aws.s3.bucket}") String bucketName,
+            @Value("${aws.s3.presigned-expiry-minutes:5}") int presignedExpiryMinutes) {
+        this.s3Client = s3Client;
+        this.s3Presigner = s3Presigner;
+        this.bucketName = bucketName;
+        this.presignedExpiryMinutes = presignedExpiryMinutes;
+    }
+
+    public UploadResult uploadPdf(MultipartFile file, String uploaderUsername) {
+        ensureBucketConfigured();
+        validatePdf(file);
+
+        String extension = ".pdf";
+        String key = "notes/" + uploaderUsername + "/" + UUID.randomUUID() + extension;
+
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .contentType("application/pdf")
+                .contentDisposition("inline")
+                .build();
+
+        try {
+            try (var inputStream = file.getInputStream()) {
+                s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, file.getSize()));
+            }
+        } catch (IOException e) {
+            throw new APIException("Failed to read uploaded file");
+        } catch (Exception e) {
+            throw new APIException("Failed to upload PDF to S3");
+        }
+
+        String fileUrl = "s3://" + bucketName + "/" + key;
+        return new UploadResult(key, fileUrl);
+    }
+
+    public String createPresignedDownloadUrl(String key, String downloadFileName) {
+        ensureBucketConfigured();
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .responseContentType("application/pdf")
+                    .responseContentDisposition("attachment; filename=\"" + sanitizeFileName(downloadFileName) + "\"")
+                    .build();
+
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(presignedExpiryMinutes))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            return s3Presigner.presignGetObject(presignRequest).url().toString();
+        } catch (Exception e) {
+            throw new APIException("Failed to create download link");
+        }
+    }
+
+    public void deleteFile(String key) {
+        if (bucketName == null || bucketName.isBlank() || key == null || key.isBlank()) {
+            return;
+        }
+
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build());
+        } catch (Exception ex) {
+            LOGGER.warn("Failed to delete S3 object key={} bucket={}", key, bucketName, ex);
+        }
+    }
+
+    public int getPresignedExpiryMinutes() {
+        return presignedExpiryMinutes;
+    }
+
+    private void ensureBucketConfigured() {
+        if (bucketName == null || bucketName.isBlank()) {
+            throw new APIException("S3 bucket is not configured");
+        }
+    }
+
+    private void validatePdf(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new APIException("PDF file is required");
+        }
+        if (file.getSize() > MAX_PDF_SIZE_BYTES) {
+            throw new APIException("PDF size must be 10MB or less");
+        }
+        if (file.getOriginalFilename() == null || !file.getOriginalFilename().toLowerCase().endsWith(".pdf")) {
+            throw new APIException("Only PDF files are allowed");
+        }
+        String contentType = file.getContentType();
+        if (contentType != null && !contentType.equalsIgnoreCase("application/pdf")) {
+            throw new APIException("Invalid file type. Expected application/pdf");
+        }
+        try (var inputStream = file.getInputStream()) {
+            byte[] header = inputStream.readNBytes(5);
+            String signature = new String(header, StandardCharsets.US_ASCII);
+            if (!"%PDF-".equals(signature)) {
+                throw new APIException("Invalid PDF file content");
+            }
+        } catch (IOException e) {
+            throw new APIException("Failed to validate uploaded file");
+        }
+    }
+
+    private String sanitizeFileName(String fileName) {
+        String baseName = (fileName == null || fileName.isBlank()) ? "notes.pdf" : fileName;
+        String normalized = baseName.replaceAll("[\\r\\n\\\\\"]", "_");
+        return normalized.endsWith(".pdf") ? normalized : normalized + ".pdf";
+    }
+
+    public record UploadResult(String fileKey, String fileUrl) {
+    }
+}

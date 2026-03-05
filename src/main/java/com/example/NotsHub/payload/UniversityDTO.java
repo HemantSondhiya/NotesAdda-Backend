@@ -14,6 +14,7 @@ public class UniversityDTO {
     private UUID id;
     private String name;
     private String code;
+    private String description;
     private String city;
     private String state;
     private String logoUrl;

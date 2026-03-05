@@ -10,7 +10,9 @@ import com.example.NotsHub.payload.SemesterDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -38,26 +40,26 @@ public class SemesterServiceImpl implements SemesterService {
         semester.setBranch(branch);
 
         Semester saved = semesterRepository.save(semester);
-
-        SemesterDTO dto = new SemesterDTO();
-        dto.setId(saved.getId());
-        dto.setNumber(saved.getNumber());
-        dto.setBranchId(saved.getBranch().getId());
-        dto.setSubjects(new ArrayList<>());
-        return dto;
+        Semester savedWithHierarchy = semesterRepository.findById(saved.getId())
+                .orElse(saved);
+        return mapToDTO(savedWithHierarchy);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<SemesterDTO> getAllSemester(int page, int size) {
-        return semesterRepository.findAll(PageRequest.of(page, size))
-                .map(semester -> {
-                    SemesterDTO dto = new SemesterDTO();
-                    dto.setId(semester.getId());
-                    dto.setNumber(semester.getNumber());
-                    dto.setBranchId(semester.getBranch().getId());
-                    dto.setSubjects(new ArrayList<>());
-                    return dto;
-                });
+        return semesterRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")))
+                .map(this::mapToDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<SemesterDTO> getSemestersByBranch(UUID branchId, int page, int size) {
+        if (!branchRepository.existsById(branchId)) {
+            throw new APIException("Branch not found with id: " + branchId);
+        }
+        return semesterRepository.findByBranchId(branchId, PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "number")))
+                .map(semester -> mapToSummaryDTO(semester, branchId));
     }
 
     @Override
@@ -83,11 +85,43 @@ public class SemesterServiceImpl implements SemesterService {
         semester.setBranch(branch);
 
         Semester updated = semesterRepository.save(semester);
+        Semester updatedWithHierarchy = semesterRepository.findById(updated.getId())
+                .orElse(updated);
+        return mapToDTO(updatedWithHierarchy);
+    }
 
+    private SemesterDTO mapToDTO(Semester semester) {
         SemesterDTO dto = new SemesterDTO();
-        dto.setId(updated.getId());
-        dto.setNumber(updated.getNumber());
-        dto.setBranchId(updated.getBranch().getId());
+        dto.setId(semester.getId());
+        dto.setNumber(semester.getNumber());
+        if (semester.getNumber() != null) {
+            dto.setSemester("Semester " + semester.getNumber());
+        }
+        if (semester.getBranch() != null) {
+            dto.setBranchId(semester.getBranch().getId());
+            dto.setBranchName(semester.getBranch().getName());
+            dto.setBranchCode(semester.getBranch().getCode());
+            if (semester.getBranch().getProgram() != null) {
+                dto.setProgramId(semester.getBranch().getProgram().getId());
+                dto.setProgramName(semester.getBranch().getProgram().getName());
+                if (semester.getBranch().getProgram().getUniversity() != null) {
+                    dto.setUniversityId(semester.getBranch().getProgram().getUniversity().getId());
+                    dto.setUniversityName(semester.getBranch().getProgram().getUniversity().getName());
+                }
+            }
+        }
+        dto.setSubjects(new ArrayList<>());
+        return dto;
+    }
+
+    private SemesterDTO mapToSummaryDTO(Semester semester, UUID branchId) {
+        SemesterDTO dto = new SemesterDTO();
+        dto.setId(semester.getId());
+        dto.setNumber(semester.getNumber());
+        if (semester.getNumber() != null) {
+            dto.setSemester("Semester " + semester.getNumber());
+        }
+        dto.setBranchId(branchId);
         dto.setSubjects(new ArrayList<>());
         return dto;
     }

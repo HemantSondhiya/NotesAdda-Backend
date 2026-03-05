@@ -1,0 +1,1 @@
+ALTER TABLE roles MODIFY COLUMN role_name VARCHAR(50);

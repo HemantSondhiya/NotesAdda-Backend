@@ -29,6 +29,9 @@ public class University {
     @Column(unique = true, nullable = false, length = 20)
     private String code;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     private String city;
     private String state;
 

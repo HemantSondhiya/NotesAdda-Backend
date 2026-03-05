@@ -11,6 +11,7 @@ public interface SubjectService {
     SubjectDTO createSubject(@Valid SubjectCreateRequest request);
 
     Page<SubjectDTO> getSubjects(int page, int size);
+    Page<SubjectDTO> getSubjectsBySemester(UUID semesterId, int page, int size);
     SubjectDTO getSubjectById(UUID id);
 
     void deleteSubject(UUID id);

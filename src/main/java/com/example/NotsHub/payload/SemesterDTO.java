@@ -11,7 +11,14 @@ import java.util.UUID;
 public class SemesterDTO {
     private UUID id;
     private Short number;
+    private String semester;
     private UUID branchId;
+    private String branchName;
+    private String branchCode;
+    private UUID programId;
+    private String programName;
+    private UUID universityId;
+    private String universityName;
     private List<SubjectDTO> subjects;
 }
 

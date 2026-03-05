@@ -14,4 +14,5 @@ public interface BranchService {
     void deleteBranch(UUID id);
 
     Page<BranchDTO> getAllBranches(int page, int size);
+    Page<BranchDTO> getBranchesByProgram(UUID programId, int page, int size);
 }

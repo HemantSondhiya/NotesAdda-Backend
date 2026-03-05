@@ -21,6 +21,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -60,6 +61,7 @@ public class UniversityServiceImpl implements UniversityService {
         University university = new University();
         university.setName(request.getName());
         university.setCode(request.getCode().toUpperCase());
+        university.setDescription(request.getDescription());
         university.setCity(request.getCity());
         university.setState(request.getState());
         university.setLogoUrl(request.getLogoUrl());
@@ -69,61 +71,11 @@ public class UniversityServiceImpl implements UniversityService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<UniversityDTO> getAllUniversities(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<University> universityPage = universityRepository.findByIsActiveTrue(pageable);
-        List<University> universities = universityPage.getContent();
-
-        if (universities.isEmpty()) {
-            return new PageImpl<>(Collections.emptyList(), pageable, universityPage.getTotalElements());
-        }
-
-        List<UUID> universityIds = universities.stream().map(University::getId).toList();
-        List<Program> programs = programRepository.findByUniversityIdIn(universityIds);
-        List<UUID> programIds = programs.stream().map(Program::getId).toList();
-
-        List<Branch> branches = programIds.isEmpty()
-                ? Collections.emptyList()
-                : branchRepository.findByProgramIdIn(programIds);
-        List<UUID> branchIds = branches.stream().map(Branch::getId).toList();
-
-        List<Semester> semesters = branchIds.isEmpty()
-                ? Collections.emptyList()
-                : semesterRepository.findByBranchIdIn(branchIds);
-        List<UUID> semesterIds = semesters.stream().map(Semester::getId).toList();
-
-        List<Subject> subjects = semesterIds.isEmpty()
-                ? Collections.emptyList()
-                : subjectRepository.findBySemesterIdIn(semesterIds);
-        List<UUID> subjectIds = subjects.stream().map(Subject::getId).toList();
-
-        List<Notes> notes = subjectIds.isEmpty()
-                ? Collections.emptyList()
-                : notesRepository.findBySubjectIdIn(subjectIds);
-
-        Map<UUID, List<Program>> programsByUniversityId = programs.stream()
-                .collect(Collectors.groupingBy(p -> p.getUniversity().getId()));
-        Map<UUID, List<Branch>> branchesByProgramId = branches.stream()
-                .collect(Collectors.groupingBy(b -> b.getProgram().getId()));
-        Map<UUID, List<Semester>> semestersByBranchId = semesters.stream()
-                .collect(Collectors.groupingBy(s -> s.getBranch().getId()));
-        Map<UUID, List<Subject>> subjectsBySemesterId = subjects.stream()
-                .collect(Collectors.groupingBy(s -> s.getSemester().getId()));
-        Map<UUID, List<Notes>> notesBySubjectId = notes.stream()
-                .collect(Collectors.groupingBy(n -> n.getSubject().getId()));
-
-        List<UniversityDTO> result = universities.stream()
-                .map(university -> mapUniversityToDTO(
-                        university,
-                        programsByUniversityId,
-                        branchesByProgramId,
-                        semestersByBranchId,
-                        subjectsBySemesterId,
-                        notesBySubjectId
-                ))
-                .toList();
-
-        return new PageImpl<>(result, pageable, universityPage.getTotalElements());
+        return universityPage.map(this::mapToDTO);
     }
 
     @Override
@@ -139,6 +91,7 @@ public class UniversityServiceImpl implements UniversityService {
 
         university.setName(request.getName());
         university.setCode(request.getCode().toUpperCase());
+        university.setDescription(request.getDescription());
         university.setCity(request.getCity());
         university.setState(request.getState());
         university.setLogoUrl(request.getLogoUrl());
@@ -160,6 +113,7 @@ public class UniversityServiceImpl implements UniversityService {
         dto.setId(university.getId());
         dto.setName(university.getName());
         dto.setCode(university.getCode());
+        dto.setDescription(university.getDescription());
         dto.setCity(university.getCity());
         dto.setState(university.getState());
         dto.setLogoUrl(university.getLogoUrl());
@@ -183,6 +137,7 @@ public class UniversityServiceImpl implements UniversityService {
                 .getOrDefault(university.getId(), Collections.emptyList())
                 .stream()
                 .map(program -> mapProgramToDTO(
+                        university,
                         program,
                         branchesByProgramId,
                         semestersByBranchId,
@@ -195,6 +150,7 @@ public class UniversityServiceImpl implements UniversityService {
     }
 
     private ProgramDTO mapProgramToDTO(
+            University university,
             Program program,
             Map<UUID, List<Branch>> branchesByProgramId,
             Map<UUID, List<Semester>> semestersByBranchId,
@@ -204,23 +160,31 @@ public class UniversityServiceImpl implements UniversityService {
         ProgramDTO dto = new ProgramDTO();
         dto.setId(program.getId());
         dto.setName(program.getName());
+        dto.setDescription(program.getDescription());
         dto.setType(program.getType());
         dto.setDuration(program.getDuration());
 
-        if (program.getUniversity() != null) {
-            dto.setUniversityId(program.getUniversity().getId());
-        }
+        dto.setUniversityId(university.getId());
 
         List<BranchDTO> branchDTOs = branchesByProgramId
                 .getOrDefault(program.getId(), Collections.emptyList())
                 .stream()
-                .map(branch -> mapBranchToDTO(branch, semestersByBranchId, subjectsBySemesterId, notesBySubjectId))
+                .map(branch -> mapBranchToDTO(
+                        university,
+                        program,
+                        branch,
+                        semestersByBranchId,
+                        subjectsBySemesterId,
+                        notesBySubjectId
+                ))
                 .toList();
         dto.setBranches(branchDTOs);
         return dto;
     }
 
     private BranchDTO mapBranchToDTO(
+            University university,
+            Program program,
             Branch branch,
             Map<UUID, List<Semester>> semestersByBranchId,
             Map<UUID, List<Subject>> subjectsBySemesterId,
@@ -230,15 +194,19 @@ public class UniversityServiceImpl implements UniversityService {
         dto.setId(branch.getId());
         dto.setName(branch.getName());
         dto.setCode(branch.getCode());
-
-        if (branch.getProgram() != null) {
-            dto.setProgramId(branch.getProgram().getId());
-        }
+        dto.setProgramId(program.getId());
 
         List<SemesterDTO> semesterDTOs = semestersByBranchId
                 .getOrDefault(branch.getId(), Collections.emptyList())
                 .stream()
-                .map(semester -> mapToDTO(semester, subjectsBySemesterId, notesBySubjectId))
+                .map(semester -> mapToDTO(
+                        semester,
+                        branch,
+                        program,
+                        university,
+                        subjectsBySemesterId,
+                        notesBySubjectId
+                ))
                 .collect(Collectors.toList());
 
         dto.setSemesters(semesterDTOs);
@@ -247,16 +215,28 @@ public class UniversityServiceImpl implements UniversityService {
 
     private SemesterDTO mapToDTO(
             Semester semester,
+            Branch branch,
+            Program program,
+            University university,
             Map<UUID, List<Subject>> subjectsBySemesterId,
             Map<UUID, List<Notes>> notesBySubjectId
     ) {
         SemesterDTO dto = new SemesterDTO();
         dto.setId(semester.getId());
         dto.setNumber(semester.getNumber());
-
-        if (semester.getBranch() != null) {
-            dto.setBranchId(semester.getBranch().getId());
+        if (semester.getNumber() != null) {
+            dto.setSemester("Semester " + semester.getNumber());
         }
+
+        if (branch != null) {
+            dto.setBranchId(branch.getId());
+            dto.setBranchName(branch.getName());
+            dto.setBranchCode(branch.getCode());
+        }
+        dto.setProgramId(program.getId());
+        dto.setProgramName(program.getName());
+        dto.setUniversityId(university.getId());
+        dto.setUniversityName(university.getName());
 
         List<SubjectDTO> subjectDTOs = subjectsBySemesterId
                 .getOrDefault(semester.getId(), Collections.emptyList())

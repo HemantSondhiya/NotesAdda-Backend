@@ -1,6 +1,11 @@
 package com.example.NotsHub.exceptions;
 
 import com.example.NotsHub.payload.APIResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -13,6 +18,7 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class MyGlobalExceptionHandler {
+    private static final Logger logger = LoggerFactory.getLogger(MyGlobalExceptionHandler.class);
 
     // ── Validation errors (@Valid) ───────────────────────────
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -43,5 +49,44 @@ public class MyGlobalExceptionHandler {
         APIResponse<?> apiResponse = new APIResponse<>(
                 e.getMessage(), false, null);
         return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
+    public ResponseEntity<APIResponse<?>> handleAccessDenied(Exception e) {
+        APIResponse<?> apiResponse = new APIResponse<>(
+                "Access denied", false, null);
+        return new ResponseEntity<>(apiResponse, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<APIResponse<?>> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        String details = e.getMostSpecificCause() != null
+                ? e.getMostSpecificCause().getMessage()
+                : e.getMessage();
+        String normalized = details == null ? "" : details.toLowerCase();
+
+        String message = "Invalid data. Please check your input and try again.";
+        if (normalized.contains("pending_user_registration.uk_pending_user_registration_username")
+                || normalized.contains("duplicate entry") && normalized.contains("username")) {
+            message = "A pending registration already exists for this username. Please verify OTP or wait for expiry, then try again.";
+        } else if (normalized.contains("pending_user_registration.uk_pending_user_registration_email")
+                || normalized.contains("duplicate entry") && normalized.contains("email")) {
+            message = "A pending registration already exists for this email. Please verify OTP or wait for expiry, then try again.";
+        } else if (normalized.contains("users") && normalized.contains("username")) {
+            message = "Username is already taken.";
+        } else if (normalized.contains("users") && normalized.contains("email")) {
+            message = "Email is already in use.";
+        }
+
+        APIResponse<?> apiResponse = new APIResponse<>(message, false, null);
+        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<APIResponse<?>> handleUnexpectedException(Exception e) {
+        logger.error("Unhandled exception", e);
+        APIResponse<?> apiResponse = new APIResponse<>(
+                "Internal server error", false, null);
+        return new ResponseEntity<>(apiResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

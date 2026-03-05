@@ -4,7 +4,9 @@ import com.example.NotsHub.payload.APIResponse;
 import com.example.NotsHub.payload.BranchCreateRequest;
 import com.example.NotsHub.payload.BranchDTO;
 import com.example.NotsHub.payload.PagedResponse;
+import com.example.NotsHub.payload.SemesterDTO;
 import com.example.NotsHub.service.BranchService;
+import com.example.NotsHub.service.SemesterService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -19,6 +21,8 @@ import java.util.UUID;
 public class BranchController {
     @Autowired
     private BranchService branchService;
+    @Autowired
+    private SemesterService semesterService;
     @PostMapping
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<?> createBranch(@Valid @RequestBody BranchCreateRequest request) {
@@ -33,6 +37,22 @@ public class BranchController {
         BranchDTO branchDTO = branchService.getBranchById(id);
         return ResponseEntity.ok(
                 new APIResponse("Branch retrieved successfully", true, branchDTO)
+        );
+    }
+
+    @GetMapping("/{id}/semesters")
+    public ResponseEntity<?> getSemestersByBranch(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<SemesterDTO> semesters = semesterService.getSemestersByBranch(id, page, size);
+        Page<SemesterSummaryItem> summary = semesters.map(s -> new SemesterSummaryItem(
+                s.getId(),
+                s.getNumber(),
+                s.getSemester()
+        ));
+        return ResponseEntity.ok(
+                new APIResponse("Semesters retrieved successfully for branch", true, PagedResponse.from(summary))
         );
     }
 
@@ -61,5 +81,8 @@ public class BranchController {
         return ResponseEntity.ok(
                 new APIResponse("Branch deleted successfully", true, null)
         );
+    }
+
+    private record SemesterSummaryItem(UUID id, Short number, String semester) {
     }
 }

@@ -46,6 +46,7 @@ public class ProgramServiceImpl implements ProgramService {
 
         Program program = new Program();
         program.setName(request.getName());
+        program.setDescription(request.getDescription());
         program.setType(request.getType());
         program.setDuration(request.getDuration());
         program.setUniversity(university);
@@ -67,7 +68,7 @@ public class ProgramServiceImpl implements ProgramService {
                 universityId,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"))
         );
-        return toProgramDTOPage(programPage);
+        return programPage.map(this::mapToSummaryDTO);
     }
 
     @Override
@@ -106,6 +107,7 @@ public class ProgramServiceImpl implements ProgramService {
         }
 
         program.setName(request.getName());
+        program.setDescription(request.getDescription());
         program.setType(request.getType());
         program.setDuration(request.getDuration());
 
@@ -127,6 +129,7 @@ public class ProgramServiceImpl implements ProgramService {
         ProgramDTO dto = new ProgramDTO();
         dto.setId(program.getId());
         dto.setName(program.getName());
+        dto.setDescription(program.getDescription());
         dto.setType(program.getType());
         dto.setDuration(program.getDuration());
         dto.setUniversityId(program.getUniversity().getId());
@@ -174,5 +177,19 @@ public class ProgramServiceImpl implements ProgramService {
                 .toList();
 
         return new PageImpl<>(dtos, programPage.getPageable(), programPage.getTotalElements());
+    }
+
+    private ProgramDTO mapToSummaryDTO(Program program) {
+        ProgramDTO dto = new ProgramDTO();
+        dto.setId(program.getId());
+        dto.setName(program.getName());
+        dto.setDescription(program.getDescription());
+        dto.setType(program.getType());
+        dto.setDuration(program.getDuration());
+        if (program.getUniversity() != null) {
+            dto.setUniversityId(program.getUniversity().getId());
+        }
+        dto.setBranches(new ArrayList<>());
+        return dto;
     }
 }

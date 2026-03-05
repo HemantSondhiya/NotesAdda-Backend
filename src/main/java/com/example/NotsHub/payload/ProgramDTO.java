@@ -12,6 +12,7 @@ import java.util.UUID;
 public class ProgramDTO {
     private UUID id;
     private String name;
+    private String description;
     private String type;
     private Short duration;
     private UUID universityId;

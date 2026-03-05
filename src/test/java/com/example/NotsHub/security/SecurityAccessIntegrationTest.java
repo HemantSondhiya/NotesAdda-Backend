@@ -106,4 +106,10 @@ class SecurityAccessIntegrationTest {
         mockMvc.perform(get("/api/auth/users"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void downloadNote_shouldNotRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/notes/{id}/download", "6730fd14-b6b6-460e-8ec2-a0bf7d00f216"))
+                .andExpect(status().isBadRequest());
+    }
 }

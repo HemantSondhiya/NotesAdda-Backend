@@ -1,7 +1,7 @@
 # NotsHub API Documentation (Frontend Guide)
 
 ## Base URL
-- Local: `http://localhost:9091`
+- Local default: `http://localhost:5000`
 
 ## Auth Overview
 - Auth endpoints are under `/api/auth`.
@@ -110,6 +110,7 @@ Admin-only endpoints require:
 {
   "name": "VIT Vellore",
   "code": "VIT-V",
+  "description": "Top private research university",
   "city": "Vellore",
   "state": "Tamil Nadu",
   "logoUrl": ""
@@ -142,6 +143,7 @@ Admin-only endpoints require:
 ```json
 {
   "name": "BTech",
+  "description": "Undergraduate engineering program",
   "type": "UG",
   "duration": 4,
   "universityId": "23ef26a9-b52b-4771-8f32-82946733138f"
@@ -189,6 +191,10 @@ Admin-only endpoints require:
 
 ### `GET /api/semesters?page=0&size=20`
 - Authenticated
+- Each semester item includes readable hierarchy fields for easy UI labels:
+  - `branchName`, `branchCode`
+  - `programName`
+  - `universityName`
 
 ### `POST /api/semesters`
 - Admin only
@@ -241,11 +247,26 @@ Admin-only endpoints require:
 
 ## Notes APIs
 
-### `GET /api/notes?page=0&size=20`
-- Authenticated
+### `GET /api/notes?q=linked&page=0&size=20`
+- Public
+- Recommended for frontend search bar and list view.
+- Query params:
+  - `q` (optional): search text
+  - `query` (optional): alias of `q`
+  - `page` (optional, default `0`)
+  - `size` (optional, default `20`)
+- Behavior:
+  - If `q`/`query` is present: case-insensitive search on `title` and `description`
+  - If search text is empty/missing: returns normal paginated notes list
+  - Only approved notes are returned
+  - Sorted by latest (`createdAt` descending)
+
+### `GET /api/notes/search?q=linked&page=0&size=20`
+- Public
+- Alternate search endpoint (same behavior as `/api/notes`).
 
 ### `POST /api/notes`
-- Authenticated user upload
+- Authenticated user metadata create (PDF only)
 - Body:
 ```json
 {
@@ -258,6 +279,19 @@ Admin-only endpoints require:
 }
 ```
 - Behavior:
+  - Admin uploader: auto-approved
+  - Non-admin uploader: pending approval
+
+### `POST /api/notes/upload`
+- Authenticated user direct PDF upload to S3 + metadata save
+- `multipart/form-data` parts:
+  - `title` (string, required)
+  - `description` (string, optional)
+  - `subjectId` (UUID, required)
+  - `file` (PDF, max 10MB, required)
+- Behavior:
+  - Stores uploaded PDF in S3
+  - Saves note metadata (`fileType` is always `PDF`)
   - Admin uploader: auto-approved
   - Non-admin uploader: pending approval
 
@@ -279,4 +313,4 @@ Admin-only endpoints require:
 - Treat `APIResponse.status` as business success flag.
 - For lists, read from `data.content` (paginated wrapper).
 - Use `page` and `size` query params for all paginated list endpoints.
-- Notes file upload itself is external to this API (API stores metadata URL/key).
+- Only PDF notes are supported.

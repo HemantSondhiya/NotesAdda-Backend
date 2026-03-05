@@ -10,6 +10,7 @@ import com.example.NotsHub.payload.SubjectDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -46,7 +47,17 @@ public class SubjectServiceImpl implements SubjectService {
 
     @Override
     public Page<SubjectDTO> getSubjects(int page, int size) {
-        return subjectRepository.findAll(PageRequest.of(page, size))
+        return subjectRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")))
+                .map(this::mapToDTO);
+    }
+
+    @Override
+    public Page<SubjectDTO> getSubjectsBySemester(UUID semesterId, int page, int size) {
+        if (!semesterRepository.existsById(semesterId)) {
+            throw new APIException("Semester not found with id: " + semesterId);
+        }
+
+        return subjectRepository.findBySemesterId(semesterId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")))
                 .map(this::mapToDTO);
     }
 

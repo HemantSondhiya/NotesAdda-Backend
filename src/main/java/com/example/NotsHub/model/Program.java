@@ -23,6 +23,9 @@ public class Program {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @Column(nullable = false, length = 20)
     private String type;
 
