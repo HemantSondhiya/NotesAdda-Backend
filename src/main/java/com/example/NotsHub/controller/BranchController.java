@@ -12,12 +12,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/branches")
+@Tag(name = "Branches", description = "Endpoints for managing university branches")
 public class BranchController {
     @Autowired
     private BranchService branchService;
@@ -38,6 +41,13 @@ public class BranchController {
         return ResponseEntity.ok(
                 new APIResponse("Branch retrieved successfully", true, branchDTO)
         );
+    }
+
+    @Operation(summary = "Get a branch by its slug")
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<?> getBranchBySlug(@PathVariable String slug) {
+        BranchDTO branch = branchService.getBySlug(slug);
+        return ResponseEntity.ok(new APIResponse("Branch retrieved successfully", true, branch));
     }
 
     @GetMapping("/{id}/semesters")

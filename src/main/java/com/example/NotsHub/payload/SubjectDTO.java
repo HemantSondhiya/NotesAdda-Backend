@@ -11,6 +11,7 @@ import java.util.UUID;
 public class SubjectDTO {
     private UUID id;
     private String name;
+    private String slug;
     private String code;
     private Short credits;
     private String syllabusUrl;

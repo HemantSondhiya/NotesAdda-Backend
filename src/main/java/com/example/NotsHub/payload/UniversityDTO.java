@@ -13,6 +13,7 @@ import java.util.UUID;
 public class UniversityDTO {
     private UUID id;
     private String name;
+    private String slug;
     private String code;
     private String description;
     private String city;

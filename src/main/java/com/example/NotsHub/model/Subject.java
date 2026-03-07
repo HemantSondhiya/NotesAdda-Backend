@@ -25,6 +25,9 @@ public class Subject {
     @Column(nullable = false, length = 200)
     private String name; // e.g. Data Structures
 
+    @Column(unique = true)
+    private String slug;
+
     @Column(length = 30)
     private String code; // e.g. CS301
 

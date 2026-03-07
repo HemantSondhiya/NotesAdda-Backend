@@ -60,13 +60,79 @@ public class S3StorageService {
                 s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, file.getSize()));
             }
         } catch (IOException e) {
+            LOGGER.error("Failed to read uploaded file", e);
             throw new APIException("Failed to read uploaded file");
         } catch (Exception e) {
+            LOGGER.error("Failed to upload PDF to S3: bucket={}, key={}", bucketName, key, e);
             throw new APIException("Failed to upload PDF to S3");
         }
 
         String fileUrl = "s3://" + bucketName + "/" + key;
         return new UploadResult(key, fileUrl);
+    }
+
+    /**
+     * Upload PDF to the pending/ prefix (for normal users awaiting approval).
+     */
+    public UploadResult uploadPdfToPending(MultipartFile file, String uploaderUsername) {
+        ensureBucketConfigured();
+        validatePdf(file);
+
+        String key = "pending/" + uploaderUsername + "/" + UUID.randomUUID() + ".pdf";
+
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .contentType("application/pdf")
+                .contentDisposition("inline")
+                .build();
+
+        try {
+            try (var inputStream = file.getInputStream()) {
+                s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, file.getSize()));
+            }
+        } catch (IOException e) {
+            LOGGER.error("Failed to read uploaded file", e);
+            throw new APIException("Failed to read uploaded file");
+        } catch (Exception e) {
+            LOGGER.error("Failed to upload pending PDF to S3: bucket={}, key={}", bucketName, key, e);
+            throw new APIException("Failed to upload PDF");
+        }
+
+        String fileUrl = "s3://" + bucketName + "/" + key;
+        return new UploadResult(key, fileUrl);
+    }
+
+    /**
+     * Move a file from pending/ prefix to notes/ prefix on approval.
+     * Returns the new UploadResult with the approved key.
+     */
+    public UploadResult moveToApproved(String pendingKey, String uploaderUsername) {
+        ensureBucketConfigured();
+        if (pendingKey == null || pendingKey.isBlank()) {
+            throw new APIException("Pending file key is required");
+        }
+
+        String approvedKey = "notes/" + uploaderUsername + "/" + UUID.randomUUID() + ".pdf";
+
+        try {
+            // Copy from pending to notes
+            s3Client.copyObject(software.amazon.awssdk.services.s3.model.CopyObjectRequest.builder()
+                    .sourceBucket(bucketName)
+                    .sourceKey(pendingKey)
+                    .destinationBucket(bucketName)
+                    .destinationKey(approvedKey)
+                    .build());
+
+            // Delete the pending file
+            deleteFile(pendingKey);
+        } catch (Exception e) {
+            LOGGER.error("Failed to move file from pending to approved: pendingKey={}, approvedKey={}", pendingKey, approvedKey, e);
+            throw new APIException("Failed to approve file upload");
+        }
+
+        String fileUrl = "s3://" + bucketName + "/" + approvedKey;
+        return new UploadResult(approvedKey, fileUrl);
     }
 
     public String createPresignedDownloadUrl(String key, String downloadFileName) {
@@ -86,6 +152,7 @@ public class S3StorageService {
 
             return s3Presigner.presignGetObject(presignRequest).url().toString();
         } catch (Exception e) {
+            LOGGER.error("Failed to create presigned download URL: bucket={}, key={}", bucketName, key, e);
             throw new APIException("Failed to create download link");
         }
     }

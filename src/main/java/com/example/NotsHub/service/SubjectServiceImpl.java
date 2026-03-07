@@ -7,6 +7,7 @@ import com.example.NotsHub.model.Semester;
 import com.example.NotsHub.model.Subject;
 import com.example.NotsHub.payload.SubjectCreateRequest;
 import com.example.NotsHub.payload.SubjectDTO;
+import com.example.NotsHub.util.SlugUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +38,7 @@ public class SubjectServiceImpl implements SubjectService {
         Subject subject = new Subject();
         subject.setName(request.getName());
         subject.setCode(request.getCode());
+        subject.setSlug(SlugUtil.makeUnique(SlugUtil.generateSlug(request.getName()), subjectRepository::existsBySlug));
         subject.setCredits(request.getCredits());
         subject.setSyllabusUrl(request.getSyllabusUrl());
         subject.setSemester(semester);
@@ -65,6 +67,13 @@ public class SubjectServiceImpl implements SubjectService {
     public SubjectDTO getSubjectById(UUID id) {
         Subject subject = subjectRepository.findById(id)
                 .orElseThrow(() -> new APIException("Subject not found with id: " + id));
+        return mapToDTO(subject);
+    }
+
+    @Override
+    public SubjectDTO getBySlug(String slug) {
+        Subject subject = subjectRepository.findBySlug(slug)
+                .orElseThrow(() -> new APIException("Subject not found with slug: " + slug));
         return mapToDTO(subject);
     }
 
@@ -102,6 +111,7 @@ public class SubjectServiceImpl implements SubjectService {
         SubjectDTO dto = new SubjectDTO();
         dto.setId(saved.getId());
         dto.setName(saved.getName());
+        dto.setSlug(saved.getSlug());
         dto.setCode(saved.getCode());
         dto.setCredits(saved.getCredits());
         dto.setSyllabusUrl(saved.getSyllabusUrl());

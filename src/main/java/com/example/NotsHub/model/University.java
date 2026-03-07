@@ -35,6 +35,9 @@ public class University {
     private String city;
     private String state;
 
+    @Column(unique = true)
+    private String slug;
+
     @Column(name = "logo_url")
     private String logoUrl;
 

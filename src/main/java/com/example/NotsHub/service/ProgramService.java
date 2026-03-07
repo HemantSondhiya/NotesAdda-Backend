@@ -16,6 +16,8 @@ public interface ProgramService {
     Page<ProgramDTO> getAllPrograms(int page, int size);
 
     ProgramDTO getProgramById(UUID programId);
+    
+    ProgramDTO getBySlug(String slug);
 
     ProgramDTO updateProgram(UUID programId, ProgramCreateRequest request);
 

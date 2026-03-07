@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -28,25 +30,20 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/notes")
+@Tag(name = "Notes", description = "Endpoints for managing, uploading, and searching notes")
 public class NotesController {
 
     @Autowired
     private NotesService notesService;
 
-    @PostMapping
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> createNotes(@Valid @RequestBody NotesCreateRequest request,
-                                         Authentication authentication) {
-        NotesDTO notesDTO = notesService.createNotes(request, authentication.getName());
-        return ResponseEntity.ok(new APIResponse<>("Notes created successfully", true, notesDTO));
-    }
+
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> uploadPdf(
-            @RequestPart("title") String title,
-            @RequestPart(value = "description", required = false) String description,
-            @RequestPart("subjectId") UUID subjectId,
+            @RequestParam("title") String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("subjectId") UUID subjectId,
             @RequestPart("file") MultipartFile file,
             Authentication authentication) {
         NotesDTO notesDTO = notesService.uploadPdfNote(title, description, subjectId, file, authentication.getName());
@@ -71,6 +68,13 @@ public class NotesController {
         String searchText = (q != null && !q.isBlank()) ? q : query;
         Page<NotesDTO> notes = notesService.searchNotes(searchText, page, size);
         return ResponseEntity.ok(new APIResponse<>("Notes retrieved successfully", true, PagedResponse.from(notes)));
+    }
+
+    @Operation(summary = "Get notes by their slug")
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<?> getNotesBySlug(@PathVariable String slug) {
+        NotesDTO notes = notesService.getBySlug(slug);
+        return ResponseEntity.ok(new APIResponse<>("Notes retrieved successfully", true, notes));
     }
 
     @GetMapping("/search")
@@ -99,6 +103,15 @@ public class NotesController {
     public ResponseEntity<?> approveNotes(@PathVariable UUID id, Authentication authentication) {
         NotesDTO notesDTO = notesService.approveNotes(id, authentication.getName());
         return ResponseEntity.ok(new APIResponse<>("Notes approved successfully", true, notesDTO));
+    }
+
+    @PutMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> rejectNotes(@PathVariable UUID id, 
+                                        @RequestParam(required = false) String rejectionNote, 
+                                        Authentication authentication) {
+        NotesDTO notesDTO = notesService.rejectNotes(id, rejectionNote, authentication.getName());
+        return ResponseEntity.ok(new APIResponse<>("Notes rejected successfully", true, notesDTO));
     }
 
     @DeleteMapping("/{id}")

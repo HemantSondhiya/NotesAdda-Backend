@@ -13,6 +13,7 @@ public interface SubjectService {
     Page<SubjectDTO> getSubjects(int page, int size);
     Page<SubjectDTO> getSubjectsBySemester(UUID semesterId, int page, int size);
     SubjectDTO getSubjectById(UUID id);
+    SubjectDTO getBySlug(String slug);
 
     void deleteSubject(UUID id);
 

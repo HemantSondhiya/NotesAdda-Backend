@@ -13,12 +13,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/universities")
+@Tag(name = "Universities", description = "Endpoints for managing universities")
 public class UniversityController {
     @Autowired
     private UniversityService universityService;
@@ -42,6 +45,13 @@ public class UniversityController {
         return ResponseEntity.status(HttpStatus.OK).body(
                 new APIResponse("Universities", true, PagedResponse.from(universities))
         );
+    }
+
+    @Operation(summary = "Get a university by its slug")
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<?> getUniversityBySlug(@PathVariable String slug) {
+        UniversityDTO university = universityService.getBySlug(slug);
+        return ResponseEntity.ok(new APIResponse("University retrieved successfully", true, university));
     }
 
     @GetMapping("/{id}/programs")

@@ -11,6 +11,7 @@ import java.util.UUID;
 public class BranchDTO {
     private UUID id;
     private String name;
+    private String slug;
     private String code;
     private UUID programId;
     private List<SemesterDTO> semesters;

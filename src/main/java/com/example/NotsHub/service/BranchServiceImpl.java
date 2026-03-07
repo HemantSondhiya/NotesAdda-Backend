@@ -10,6 +10,7 @@ import com.example.NotsHub.model.Semester;
 import com.example.NotsHub.payload.BranchCreateRequest;
 import com.example.NotsHub.payload.BranchDTO;
 import com.example.NotsHub.payload.SemesterDTO;
+import com.example.NotsHub.util.SlugUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -71,14 +72,19 @@ public class BranchServiceImpl implements BranchService {
     }
 
     @Override
+    public BranchDTO getBySlug(String slug) {
+        Branch branch = branchRepository.findBySlug(slug)
+                .orElseThrow(() -> new APIException("Branch not found with slug: " + slug));
+        return mapToDTO(branch);
+    }
+
+    @Override
     public BranchDTO updateBranch(UUID id, BranchCreateRequest request) {
         Branch branch = branchRepository.findById(id)
                 .orElseThrow(() -> new APIException("Branch not found with id: " + id));
 
         Program program = programRepository.findById(request.getProgramId())
-                .orElseThrow(() ->
-                        new APIException("Program not found with id: " + request.getProgramId())
-                );
+                .orElseThrow(() -> new APIException("Program not found with id: " + request.getProgramId()));
 
         Branch existing = branchRepository.findByNameAndProgramId(request.getName(), request.getProgramId());
         if (existing != null && !existing.getId().equals(branch.getId())) {
@@ -127,6 +133,7 @@ public class BranchServiceImpl implements BranchService {
         BranchDTO dto = new BranchDTO();
         dto.setId(branch.getId());
         dto.setName(branch.getName());
+        dto.setSlug(branch.getSlug());
         dto.setCode(branch.getCode());
         dto.setProgramId(branch.getProgram().getId());
 
@@ -165,6 +172,7 @@ public class BranchServiceImpl implements BranchService {
         BranchDTO dto = new BranchDTO();
         dto.setId(branch.getId());
         dto.setName(branch.getName());
+        dto.setSlug(branch.getSlug());
         dto.setCode(branch.getCode());
         dto.setProgramId(branch.getProgram().getId());
         dto.setSemesters(new ArrayList<>());

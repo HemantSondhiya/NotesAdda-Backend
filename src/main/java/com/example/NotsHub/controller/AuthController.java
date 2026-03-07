@@ -19,10 +19,12 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication", description = "Endpoints for user authentication and lifecycle management")
 public class AuthController {
 
     @Autowired

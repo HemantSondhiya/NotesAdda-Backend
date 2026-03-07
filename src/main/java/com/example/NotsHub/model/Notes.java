@@ -26,6 +26,9 @@ public class Notes {
     @Column(nullable = false, length = 300)
     private String title;
 
+    @Column(unique = true)
+    private String slug;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -37,6 +40,9 @@ public class Notes {
 
     @Column(name = "file_type", length = 20)
     private String fileType; // PDF | DOCX | PPTX | IMAGE
+
+    @Column(name = "file_checksum", length = 64)
+    private String fileChecksum; // SHA-256 hash of the file contents
 
 
     @Column(name = "is_approved")

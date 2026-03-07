@@ -12,6 +12,8 @@ public interface UniversityService {
     UniversityDTO createUniversity(@Valid UniversityCreateRequest request);
 
     Page<UniversityDTO> getAllUniversities(int page, int size);
+    
+    UniversityDTO getBySlug(String slug);
 
     UniversityDTO updateUniversity(UUID id, @Valid UniversityCreateRequest request);
 

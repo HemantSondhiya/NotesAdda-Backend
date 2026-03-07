@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -68,39 +70,7 @@ class NotesServiceImplTest {
         request.setSubjectId(subject.getId());
     }
 
-    @Test
-    void createNotes_shouldStayPending_forNonAdminUser() {
-        User student = userWithRole(1L, AppRole.ROLE_STUDENT);
-        when(subjectRepository.findById(subject.getId())).thenReturn(Optional.of(subject));
-        when(userRepository.findByUserName("student1")).thenReturn(Optional.of(student));
-        when(notesRepository.save(any(Notes.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ArgumentCaptor<Notes> captor = ArgumentCaptor.forClass(Notes.class);
-        notesService.createNotes(request, "student1");
-        verify(notesRepository).save(captor.capture());
-
-        Notes saved = captor.getValue();
-        assertTrue(!saved.getIsApproved());
-        assertTrue(saved.getApprovedBy() == null);
-        assertTrue(saved.getApprovedAt() == null);
-    }
-
-    @Test
-    void createNotes_shouldAutoApprove_forAdminUser() {
-        User admin = userWithRole(2L, AppRole.ROLE_UNIVERSITY_ADMIN);
-        when(subjectRepository.findById(subject.getId())).thenReturn(Optional.of(subject));
-        when(userRepository.findByUserName("admin1")).thenReturn(Optional.of(admin));
-        when(notesRepository.save(any(Notes.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        ArgumentCaptor<Notes> captor = ArgumentCaptor.forClass(Notes.class);
-        notesService.createNotes(request, "admin1");
-        verify(notesRepository).save(captor.capture());
-
-        Notes saved = captor.getValue();
-        assertTrue(saved.getIsApproved());
-        assertTrue(saved.getApprovedBy() != null);
-        assertTrue(saved.getApprovedAt() != null);
-    }
 
     @Test
     void approveNotes_shouldFail_forNonAdminApprover() {
@@ -153,33 +123,25 @@ class NotesServiceImplTest {
     }
 
     @Test
-    void uploadPdfNote_shouldDeleteUploadedFile_whenSaveFails() {
+    void uploadPdfNote_shouldDeleteUploadedFile_whenSaveFails() throws Exception {
         User student = userWithRole(1L, AppRole.ROLE_STUDENT);
         String key = "notes/student1/temp.pdf";
 
+        MultipartFile mockFile = mock(MultipartFile.class);
+        when(mockFile.getBytes()).thenReturn("dummy".getBytes());
+
         when(subjectRepository.findById(subject.getId())).thenReturn(Optional.of(subject));
         when(userRepository.findByUserName("student1")).thenReturn(Optional.of(student));
-        when(s3StorageService.uploadPdf(any(), eq("student1")))
+        when(s3StorageService.uploadPdfToPending(any(), eq("student1")))
                 .thenReturn(new S3StorageService.UploadResult(key, "s3://bucket/" + key));
         when(notesRepository.save(any(Notes.class))).thenThrow(new RuntimeException("db down"));
 
         assertThrows(RuntimeException.class,
-                () -> notesService.uploadPdfNote("t", "d", subject.getId(), null, "student1"));
+                () -> notesService.uploadPdfNote("t", "d", subject.getId(), mockFile, "student1"));
         verify(s3StorageService).deleteFile(key);
     }
 
-    @Test
-    void createNotes_shouldRejectNonPdfFileType() {
-        User student = userWithRole(1L, AppRole.ROLE_STUDENT);
-        request.setFileType("DOCX");
 
-        when(subjectRepository.findById(subject.getId())).thenReturn(Optional.of(subject));
-        when(userRepository.findByUserName("student1")).thenReturn(Optional.of(student));
-
-        APIException ex = assertThrows(APIException.class, () -> notesService.createNotes(request, "student1"));
-        assertEquals("Only PDF file type is allowed", ex.getMessage());
-        verify(notesRepository, never()).save(any(Notes.class));
-    }
 
     @Test
     void searchNotes_shouldSearchByTitleOrDescription_whenQueryProvided() {

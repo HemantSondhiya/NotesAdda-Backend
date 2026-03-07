@@ -15,6 +15,11 @@ public interface ProgramRepository extends JpaRepository<Program, UUID> {
 
     List<Program> findByUniversityId(UUID universityId);
     Page<Program> findByUniversityId(UUID universityId, Pageable pageable);
+    boolean existsBySlug(String slug);
+    Optional<Program> findBySlug(String slug);
+
+    @Query("SELECT DISTINCT p FROM Program p LEFT JOIN FETCH p.branches WHERE p.slug = :slug")
+    Optional<Program> findBySlugWithBranches(@Param("slug") String slug);
 
     boolean existsByNameAndUniversityId(String name, UUID universityId);
 

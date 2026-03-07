@@ -11,11 +11,13 @@ import com.example.NotsHub.model.Subject;
 import com.example.NotsHub.model.User;
 import com.example.NotsHub.payload.NotesCreateRequest;
 import com.example.NotsHub.payload.NotesDTO;
+import com.example.NotsHub.util.SlugUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.lang.Nullable;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
+@Transactional
 public class NotesServiceImpl implements NotesService {
 
     @Autowired
@@ -38,33 +41,7 @@ public class NotesServiceImpl implements NotesService {
     @Autowired
     private S3StorageService s3StorageService;
 
-    @Override
-    public NotesDTO createNotes(NotesCreateRequest request, String uploaderUsername) {
-        Subject subject = subjectRepository.findById(request.getSubjectId())
-                .orElseThrow(() -> new APIException("Subject not found with id: " + request.getSubjectId()));
 
-        User uploader = userRepository.findByUserName(uploaderUsername)
-                .orElseThrow(() -> new APIException("User not found: " + uploaderUsername));
-
-        Notes notes = new Notes();
-        notes.setTitle(request.getTitle());
-        notes.setDescription(request.getDescription());
-        notes.setFileUrl(request.getFileUrl());
-        notes.setFileKey(request.getFileKey());
-        notes.setFileType(normalizeAndValidatePdfFileType(request.getFileType()));
-        notes.setSubject(subject);
-        notes.setUploadedBy(uploader);
-        if (isAdmin(uploader)) {
-            notes.setIsApproved(true);
-            notes.setApprovedBy(uploader);
-            notes.setApprovedAt(LocalDateTime.now());
-        } else {
-            notes.setIsApproved(false);
-        }
-
-        Notes saved = notesRepository.save(notes);
-        return mapToDTO(saved);
-    }
 
     @Override
     public NotesDTO uploadPdfNote(String title, String description, UUID subjectId, MultipartFile file, String uploaderUsername) {
@@ -77,7 +54,41 @@ public class NotesServiceImpl implements NotesService {
         User uploader = userRepository.findByUserName(uploaderUsername)
                 .orElseThrow(() -> new APIException("User not found: " + uploaderUsername));
 
-        S3StorageService.UploadResult uploadResult = s3StorageService.uploadPdf(file, uploaderUsername);
+        boolean autoApprove = isAdmin(uploader);
+
+        String checksum = null;
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(file.getBytes());
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            checksum = hexString.toString();
+        } catch (Exception e) {
+            throw new APIException("Failed to calculate file checksum");
+        }
+
+        if (!autoApprove) {
+            boolean alreadyPending = notesRepository.existsByUploadedByAndSubjectIdAndFileChecksumAndIsApprovedFalse(
+                    uploader, subjectId, checksum
+            );
+            if (alreadyPending) {
+                throw new APIException("You have already uploaded this exact file and it is pending approval.");
+            }
+        }
+
+        S3StorageService.UploadResult uploadResult;
+
+        if (autoApprove) {
+            // Admin: upload directly to notes/ prefix
+            uploadResult = s3StorageService.uploadPdf(file, uploaderUsername);
+        } else {
+            // Normal user: upload to pending/ prefix
+            uploadResult = s3StorageService.uploadPdfToPending(file, uploaderUsername);
+        }
 
         Notes notes = new Notes();
         notes.setTitle(title.trim());
@@ -85,6 +96,8 @@ public class NotesServiceImpl implements NotesService {
         notes.setFileUrl(uploadResult.fileUrl());
         notes.setFileKey(uploadResult.fileKey());
         notes.setFileType("PDF");
+        notes.setSlug(SlugUtil.makeUnique(SlugUtil.generateSlug(title.trim()), notesRepository::existsBySlug));
+        notes.setFileChecksum(checksum);
         notes.setSubject(subject);
         notes.setUploadedBy(uploader);
         if (isAdmin(uploader)) {
@@ -150,12 +163,42 @@ public class NotesServiceImpl implements NotesService {
         notes.setIsApproved(true);
         notes.setApprovedBy(approver);
         notes.setApprovedAt(LocalDateTime.now());
+        notes.setRejectionNote(null);
 
         Notes saved = notesRepository.save(notes);
         return mapToDTO(saved);
     }
 
     @Override
+    public NotesDTO rejectNotes(UUID notesId, String rejectionNote, String rejectorUsername) {
+        Notes notes = notesRepository.findById(notesId)
+                .orElseThrow(() -> new APIException("Notes not found with id: " + notesId));
+
+        User rejector = userRepository.findByUserName(rejectorUsername)
+                .orElseThrow(() -> new APIException("User not found: " + rejectorUsername));
+
+        if (!isAdmin(rejector)) {
+            throw new APIException("Only admin can reject notes");
+        }
+
+        notes.setIsApproved(false);
+        notes.setRejectionNote(rejectionNote);
+        notes.setApprovedBy(null);
+        notes.setApprovedAt(null);
+        
+        // Delete the pending file from S3 to save space, since it's rejected
+        if (notes.getFileKey() != null) {
+            s3StorageService.deleteFile(notes.getFileKey());
+            notes.setFileKey(null);
+            notes.setFileUrl(null);
+        }
+
+        Notes saved = notesRepository.save(notes);
+        return mapToDTO(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, String> generateDownloadLink(UUID notesId, @Nullable String requesterUsername) {
         Notes notes = notesRepository.findById(notesId)
                 .orElseThrow(() -> new APIException("Notes not found with id: " + notesId));
@@ -194,12 +237,14 @@ public class NotesServiceImpl implements NotesService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<NotesDTO> getAllNotes(int page, int size) {
         return notesRepository.findByIsApprovedTrue(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .map(this::mapToDTO);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<NotesDTO> getNotesBySubject(UUID subjectId, int page, int size) {
         if (!subjectRepository.existsById(subjectId)) {
             throw new APIException("Subject not found with id: " + subjectId);
@@ -212,6 +257,15 @@ public class NotesServiceImpl implements NotesService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public NotesDTO getBySlug(String slug) {
+        Notes notes = notesRepository.findBySlug(slug)
+                .orElseThrow(() -> new APIException("Notes not found with slug: " + slug));
+        return mapToDTO(notes);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<NotesDTO> searchNotes(String query, int page, int size) {
         String normalizedQuery = query == null ? "" : query.trim();
         if (normalizedQuery.isEmpty()) {
@@ -261,6 +315,7 @@ public class NotesServiceImpl implements NotesService {
         NotesDTO dto = new NotesDTO();
         dto.setId(notes.getId());
         dto.setTitle(notes.getTitle());
+        dto.setSlug(notes.getSlug());
         dto.setDescription(notes.getDescription());
         dto.setFileUrl(notes.getFileUrl());
         dto.setFileKey(notes.getFileKey());
@@ -273,8 +328,15 @@ public class NotesServiceImpl implements NotesService {
         if (notes.getSubject() != null) {
             dto.setSubjectId(notes.getSubject().getId());
         }
+        if (notes.getId() != null) {
+            dto.setDownloadUrl("/api/notes/" + notes.getId() + "/download");
+        }
         if (notes.getUploadedBy() != null) {
             dto.setUploadedById(notes.getUploadedBy().getUserId());
+            dto.setUploaderName(notes.getUploadedBy().getUserName());
+            dto.setUploaderTotalNotes(notesRepository.countByUploadedByAndIsApprovedTrue(notes.getUploadedBy()));
+        } else {
+            dto.setUploaderTotalNotes(0L);
         }
         if (notes.getApprovedBy() != null) {
             dto.setApprovedById(notes.getApprovedBy().getUserId());

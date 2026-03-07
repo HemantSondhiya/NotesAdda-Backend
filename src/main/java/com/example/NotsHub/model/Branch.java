@@ -25,6 +25,9 @@ public class Branch {
     @Column(nullable = false, length = 150)
     private String name;
 
+    @Column(unique = true)
+    private String slug;
+
     @Column(nullable = false, length = 20)
     private String code;
 

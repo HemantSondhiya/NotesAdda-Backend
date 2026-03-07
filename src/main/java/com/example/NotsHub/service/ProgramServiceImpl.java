@@ -9,6 +9,7 @@ import com.example.NotsHub.model.University;
 import com.example.NotsHub.payload.BranchDTO;
 import com.example.NotsHub.payload.ProgramCreateRequest;
 import com.example.NotsHub.payload.ProgramDTO;
+import com.example.NotsHub.util.SlugUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -49,6 +50,7 @@ public class ProgramServiceImpl implements ProgramService {
         program.setDescription(request.getDescription());
         program.setType(request.getType());
         program.setDuration(request.getDuration());
+        program.setSlug(SlugUtil.makeUnique(SlugUtil.generateSlug(request.getName()), programRepository::existsBySlug));
         program.setUniversity(university);
 
         Program saved = programRepository.save(program);
@@ -83,6 +85,13 @@ public class ProgramServiceImpl implements ProgramService {
     public ProgramDTO getProgramById(UUID programId) {
         Program program = programRepository.findByIdWithBranches(programId)
                 .orElseThrow(() -> new APIException("Program not found with id: " + programId));
+        return mapToDTO(program);
+    }
+
+    @Override
+    public ProgramDTO getBySlug(String slug) {
+        Program program = programRepository.findBySlugWithBranches(slug)
+                .orElseThrow(() -> new APIException("Program not found with slug: " + slug));
         return mapToDTO(program);
     }
 
@@ -129,6 +138,7 @@ public class ProgramServiceImpl implements ProgramService {
         ProgramDTO dto = new ProgramDTO();
         dto.setId(program.getId());
         dto.setName(program.getName());
+        dto.setSlug(program.getSlug());
         dto.setDescription(program.getDescription());
         dto.setType(program.getType());
         dto.setDuration(program.getDuration());
@@ -183,6 +193,7 @@ public class ProgramServiceImpl implements ProgramService {
         ProgramDTO dto = new ProgramDTO();
         dto.setId(program.getId());
         dto.setName(program.getName());
+        dto.setSlug(program.getSlug());
         dto.setDescription(program.getDescription());
         dto.setType(program.getType());
         dto.setDuration(program.getDuration());

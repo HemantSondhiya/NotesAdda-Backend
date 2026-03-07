@@ -12,12 +12,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/subjects")
+@Tag(name = "Subjects", description = "Endpoints for managing subjects")
 public class SubjectController {
 
     @Autowired
@@ -44,6 +47,13 @@ public class SubjectController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getSubjectById(@PathVariable UUID id) {
         SubjectDTO subject = subjectService.getSubjectById(id);
+        return ResponseEntity.ok(new APIResponse<>("Subject retrieved successfully", true, subject));
+    }
+
+    @Operation(summary = "Get a subject by its slug")
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<?> getSubjectBySlug(@PathVariable String slug) {
+        SubjectDTO subject = subjectService.getBySlug(slug);
         return ResponseEntity.ok(new APIResponse<>("Subject retrieved successfully", true, subject));
     }
 

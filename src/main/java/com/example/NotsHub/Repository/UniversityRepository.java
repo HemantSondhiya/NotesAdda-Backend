@@ -7,10 +7,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface UniversityRepository extends JpaRepository<University, UUID> {
     boolean existsByCode(String code);
+    boolean existsBySlug(String slug);
+    Optional<University> findBySlug(String slug);
     Page<University> findByIsActiveTrue(Pageable pageable);
 
     @Query("""

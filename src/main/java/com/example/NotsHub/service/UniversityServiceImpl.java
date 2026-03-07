@@ -14,6 +14,7 @@ import com.example.NotsHub.model.Semester;
 import com.example.NotsHub.model.Subject;
 import com.example.NotsHub.model.University;
 import com.example.NotsHub.payload.*;
+import com.example.NotsHub.util.SlugUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -65,6 +66,7 @@ public class UniversityServiceImpl implements UniversityService {
         university.setCity(request.getCity());
         university.setState(request.getState());
         university.setLogoUrl(request.getLogoUrl());
+        university.setSlug(SlugUtil.makeUnique(SlugUtil.generateSlug(request.getName()), universityRepository::existsBySlug));
         university.setIsActive(true);
 
         return mapToDTO(universityRepository.save(university));
@@ -76,6 +78,14 @@ public class UniversityServiceImpl implements UniversityService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<University> universityPage = universityRepository.findByIsActiveTrue(pageable);
         return universityPage.map(this::mapToDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UniversityDTO getBySlug(String slug) {
+        University university = universityRepository.findBySlug(slug)
+                .orElseThrow(() -> new APIException("University not found with slug: " + slug));
+        return mapToDTO(university);
     }
 
     @Override
@@ -112,6 +122,7 @@ public class UniversityServiceImpl implements UniversityService {
         UniversityDTO dto = new UniversityDTO();
         dto.setId(university.getId());
         dto.setName(university.getName());
+        dto.setSlug(university.getSlug());
         dto.setCode(university.getCode());
         dto.setDescription(university.getDescription());
         dto.setCity(university.getCity());

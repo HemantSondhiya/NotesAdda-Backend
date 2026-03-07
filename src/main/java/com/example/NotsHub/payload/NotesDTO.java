@@ -1,5 +1,6 @@
 package com.example.NotsHub.payload;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -11,9 +12,16 @@ import java.util.UUID;
 public class NotesDTO {
     private UUID id;
     private String title;
+    private String slug;
     private String description;
+
+    @JsonIgnore
     private String fileUrl;
+
+    @JsonIgnore
     private String fileKey;
+
+    private String downloadUrl;
     private String fileType; // PDF | DOCX | PPTX | IMAGE
     private Boolean isApproved;
     private String rejectionNote;
@@ -21,6 +29,8 @@ public class NotesDTO {
     private LocalDateTime approvedAt;
     private UUID subjectId;
     private Long uploadedById;
+    private String uploaderName;
+    private Long uploaderTotalNotes;
     private Long approvedById;
 }
 

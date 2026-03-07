@@ -13,12 +13,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/programs")
+@Tag(name = "Programs", description = "Endpoints for managing academic programs")
 public class ProgramController {
 
     @Autowired
@@ -49,6 +52,13 @@ public class ProgramController {
         ProgramDTO program = programService.getProgramById(id);
         return ResponseEntity.ok(
                 new APIResponse("Program retrieved successfully", true, program));
+    }
+
+    @Operation(summary = "Get a program by its slug")
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<?> getProgramBySlug(@PathVariable String slug) {
+        ProgramDTO program = programService.getBySlug(slug);
+        return ResponseEntity.ok(new APIResponse("Program retrieved successfully", true, program));
     }
 
     @GetMapping("/{id}/branches")

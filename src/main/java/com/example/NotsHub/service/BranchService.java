@@ -10,6 +10,7 @@ import java.util.UUID;
 public interface BranchService {
     BranchDTO createBranch(@Valid BranchCreateRequest request);
     BranchDTO getBranchById(UUID id);
+    BranchDTO getBySlug(String slug);
     BranchDTO updateBranch(UUID id, @Valid BranchCreateRequest request);
     void deleteBranch(UUID id);
 
