@@ -16,6 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import java.util.UUID;
 
@@ -28,11 +30,12 @@ public class UniversityController {
     @Autowired
     private ProgramService programService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<?> createUniversity(
-            @Valid @RequestBody UniversityCreateRequest request) {
-        UniversityDTO universityDTO = universityService.createUniversity(request);
+            @Valid @ModelAttribute UniversityCreateRequest request,
+            @RequestParam(value = "logo", required = false) MultipartFile logoFile) {
+        UniversityDTO universityDTO = universityService.createUniversity(request, logoFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 new APIResponse("University created successfully", true, universityDTO));
     }
@@ -65,12 +68,13 @@ public class UniversityController {
         );
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<?> updateUniversity(
             @PathVariable UUID id,
-            @Valid @RequestBody UniversityCreateRequest request) {
-        UniversityDTO updated = universityService.updateUniversity(id, request);
+            @Valid @ModelAttribute UniversityCreateRequest request,
+            @RequestParam(value = "logo", required = false) MultipartFile logoFile) {
+        UniversityDTO updated = universityService.updateUniversity(id, request, logoFile);
         return ResponseEntity.ok(new APIResponse("University updated successfully", true, updated));
     }
 

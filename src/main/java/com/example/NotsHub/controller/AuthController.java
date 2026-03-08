@@ -4,11 +4,8 @@ package com.example.NotsHub.controller;
 import com.example.NotsHub.payload.AuthenticationResult;
 import com.example.NotsHub.payload.APIResponse;
 import com.example.NotsHub.payload.PagedResponse;
+import com.example.NotsHub.security.request.*;
 import com.example.NotsHub.security.response.UserInfoResponse;
-import com.example.NotsHub.security.request.LoginRequest;
-import com.example.NotsHub.security.request.ResendEmailOtpRequest;
-import com.example.NotsHub.security.request.SignupRequest;
-import com.example.NotsHub.security.request.VerifyEmailOtpRequest;
 import com.example.NotsHub.security.response.MessageResponse;
 import com.example.NotsHub.service.AuthService;
 import jakarta.validation.Valid;
@@ -82,6 +79,16 @@ public class AuthController {
                                          @RequestParam(defaultValue = "20") int size){
         Page<UserInfoResponse> users = authService.getAllUsers(page, size);
         return ResponseEntity.ok(new APIResponse<>("Users retrieved successfully", true, PagedResponse.from(users)));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return authService.forgotPassword(request);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return authService.resetPassword(request);
     }
 
 

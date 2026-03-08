@@ -1,15 +1,16 @@
 package com.example.NotsHub.security.response;
 
 import java.util.List;
+import java.util.UUID;
 
 public class UserInfoResponse {
-    private Long id;
+    private UUID id;
     private String jwtToken;
     private String username;
     private String email;
     private List<String> roles;
 
-    public UserInfoResponse(Long id, String username, List<String> roles, String email, String jwtToken) {
+    public UserInfoResponse(UUID id, String username, List<String> roles, String email, String jwtToken) {
         this.id = id;
         this.username = username;
         this.roles = roles;
@@ -17,17 +18,17 @@ public class UserInfoResponse {
         this.jwtToken = jwtToken;
     }
 
-    public UserInfoResponse(Long id, String username, List<String> roles) {
+    public UserInfoResponse(UUID id, String username, List<String> roles) {
         this.id = id;
         this.username = username;
         this.roles = roles;
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

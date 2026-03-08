@@ -14,31 +14,27 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @Setter
 @NoArgsConstructor
-@Table(name = "email_verification_otp")
-public class EmailVerificationOtp {
+@Table(name = "password_reset_token")
+public class PasswordResetToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "id")
     private UUID id;
+
+    @Column(name = "token", nullable = false, length = 255, unique = true)
+    private String token;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Column(name = "otp_hash", nullable = false, length = 255)
-    private String otpHash;
-
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
-    @Column(name = "attempt_count", nullable = false)
-    private int attemptCount = 0;
+    @Column(name = "used", nullable = false)
+    private boolean used = false;
 
-    @Column(name = "last_sent_at", nullable = false)
-    private LocalDateTime lastSentAt;
-
-    @Column(name = "verified_at")
-    private LocalDateTime verifiedAt;
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

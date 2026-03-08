@@ -7,6 +7,9 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Getter
@@ -19,9 +22,10 @@ import java.util.Set;
         })
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "user_id")
-    private Long userId;
+    private UUID userId;
 
     @NotBlank
     @Size(max = 20)

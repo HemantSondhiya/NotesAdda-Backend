@@ -9,6 +9,10 @@ import lombok.Data;
 public class SignupRequest {
     @NotBlank
     @Size(min = 3, max = 20)
+    @Pattern(
+            regexp = "^[a-zA-Z0-9._-]+$",
+            message = "Username can only contain letters, numbers, ., _, - and no spaces"
+    )
     private String username;
 
     @NotBlank

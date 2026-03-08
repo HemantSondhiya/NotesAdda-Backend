@@ -75,7 +75,7 @@ class NotesServiceImplTest {
     @Test
     void approveNotes_shouldFail_forNonAdminApprover() {
         UUID notesId = UUID.randomUUID();
-        User student = userWithRole(3L, AppRole.ROLE_STUDENT);
+        User student = userWithRole(UUID.randomUUID(), AppRole.ROLE_STUDENT);
         Notes notes = new Notes();
         notes.setId(notesId);
 
@@ -124,7 +124,7 @@ class NotesServiceImplTest {
 
     @Test
     void uploadPdfNote_shouldDeleteUploadedFile_whenSaveFails() throws Exception {
-        User student = userWithRole(1L, AppRole.ROLE_STUDENT);
+        User student = userWithRole(UUID.randomUUID(), AppRole.ROLE_STUDENT);
         String key = "notes/student1/temp.pdf";
 
         MultipartFile mockFile = mock(MultipartFile.class);
@@ -186,10 +186,10 @@ class NotesServiceImplTest {
         );
     }
 
-    private User userWithRole(Long id, AppRole roleName) {
+    private User userWithRole(UUID id, AppRole roleName) {
         User user = new User();
         user.setUserId(id);
-        user.setUserName("u" + id);
+        user.setUserName("u" + id.toString().substring(0, 4));
         Role role = new Role();
         role.setRoleName(roleName);
         user.setRoles(Set.of(role));

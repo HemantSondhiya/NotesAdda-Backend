@@ -41,12 +41,39 @@ public class EmailOtpNotificationService {
             if (!fromEmail.isBlank()) {
                 message.setFrom(fromEmail);
             }
-            message.setSubject("NotsHub Email Verification OTP");
-            message.setText("Your NotsHub verification OTP is " + otp + ". It expires in "
+            message.setSubject("NotesPitara Email Verification OTP");
+            message.setText("Your Notespitara verification OTP is " + otp + ". It expires in "
                     + expiryMinutes + " minutes.");
             mailSender.send(message);
         } catch (Exception ex) {
             throw new APIException("Unable to send verification OTP email. Please try again.");
+        }
+    }
+
+    public void sendPasswordResetLink(String recipient, String resetUrl, int expiryMinutes) {
+        if (logOnlyMode) {
+            log.info("Password reset link for {} is {} (log-only mode enabled)", recipient, resetUrl);
+            return;
+        }
+
+        try {
+            JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+            if (mailSender == null) {
+                throw new APIException("Email sender is not configured.");
+            }
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(recipient);
+            if (!fromEmail.isBlank()) {
+                message.setFrom(fromEmail);
+            }
+            message.setSubject("NotesPitara Password Reset");
+            message.setText("Click the link to reset your password: " + resetUrl
+                    + "\n\nThis link expires in " + expiryMinutes + " minutes.");
+
+            mailSender.send(message);
+        } catch (Exception ex) {
+            throw new APIException("Unable to send password reset email. Please try again.");
         }
     }
 }

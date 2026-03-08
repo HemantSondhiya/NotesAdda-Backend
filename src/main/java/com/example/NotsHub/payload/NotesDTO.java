@@ -28,9 +28,9 @@ public class NotesDTO {
     private LocalDateTime createdAt;
     private LocalDateTime approvedAt;
     private UUID subjectId;
-    private Long uploadedById;
+    private UUID uploadedById;
     private String uploaderName;
     private Long uploaderTotalNotes;
-    private Long approvedById;
+    private UUID approvedById;
 }
 

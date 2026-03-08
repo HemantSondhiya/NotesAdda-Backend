@@ -213,6 +213,60 @@ public class S3StorageService {
         return normalized.endsWith(".pdf") ? normalized : normalized + ".pdf";
     }
 
+    public UploadResult uploadImage(MultipartFile file, String folderPrefix) {
+        ensureBucketConfigured();
+        validateImage(file);
+
+        if (folderPrefix == null || folderPrefix.isBlank()) {
+            folderPrefix = "images";
+        }
+
+        String extension = getFileExtension(file.getOriginalFilename());
+        String key = folderPrefix + "/" + UUID.randomUUID() + extension;
+
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .contentType(file.getContentType())
+                .contentDisposition("inline")
+                .build();
+
+        try {
+            try (var inputStream = file.getInputStream()) {
+                s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, file.getSize()));
+            }
+        } catch (IOException e) {
+            LOGGER.error("Failed to read uploaded image", e);
+            throw new APIException("Failed to read uploaded image");
+        } catch (Exception e) {
+            LOGGER.error("Failed to upload image to S3: bucket={}, key={}", bucketName, key, e);
+            throw new APIException("Failed to upload image to S3");
+        }
+
+        String fileUrl = "s3://" + bucketName + "/" + key;
+        return new UploadResult(key, fileUrl);
+    }
+
+    private void validateImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new APIException("Image file is required");
+        }
+        if (file.getSize() > 5L * 1024L * 1024L) {
+            throw new APIException("Image size must be 5MB or less");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !(contentType.startsWith("image/"))) {
+            throw new APIException("Only image files are allowed. Expected image/*");
+        }
+    }
+
+    private String getFileExtension(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            return "";
+        }
+        return filename.substring(filename.lastIndexOf("."));
+    }
+
     public record UploadResult(String fileKey, String fileUrl) {
     }
 }

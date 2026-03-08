@@ -1,21 +1,11 @@
 package com.example.NotsHub.service;
 
-import com.example.NotsHub.Repository.EmailVerificationOtpRepository;
-import com.example.NotsHub.Repository.PendingUserRegistrationRepository;
-import com.example.NotsHub.Repository.RoleRepository;
-import com.example.NotsHub.Repository.UserRepository;
+import com.example.NotsHub.Repository.*;
 import com.example.NotsHub.exceptions.APIException;
-import com.example.NotsHub.model.AppRole;
-import com.example.NotsHub.model.EmailVerificationOtp;
-import com.example.NotsHub.model.PendingUserRegistration;
-import com.example.NotsHub.model.Role;
-import com.example.NotsHub.model.User;
+import com.example.NotsHub.model.*;
 import com.example.NotsHub.payload.AuthenticationResult;
 import com.example.NotsHub.security.jwt.JwtUtils;
-import com.example.NotsHub.security.request.LoginRequest;
-import com.example.NotsHub.security.request.ResendEmailOtpRequest;
-import com.example.NotsHub.security.request.SignupRequest;
-import com.example.NotsHub.security.request.VerifyEmailOtpRequest;
+import com.example.NotsHub.security.request.*;
 import com.example.NotsHub.security.response.MessageResponse;
 import com.example.NotsHub.security.response.UserInfoResponse;
 import com.example.NotsHub.security.services.UserDetailsImpl;
@@ -71,12 +61,29 @@ public class AuthServiceImpl implements AuthService {
     private int otpMaxAttempts;
     @org.springframework.beans.factory.annotation.Value("${app.email.otp.resend-cooldown-seconds:60}")
     private int otpResendCooldownSeconds;
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @org.springframework.beans.factory.annotation.Value("${app.password-reset.expiry-minutes:15}")
+    private int passwordResetExpiryMinutes;
+
+    @org.springframework.beans.factory.annotation.Value("${app.frontend.reset-password-url:http://localhost:3000/reset-password}")
+    private String resetPasswordBaseUrl;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
+
     @Override
     public AuthenticationResult login(LoginRequest loginRequest) {
-        User user = userRepository.findByUserName(loginRequest.getUsername())
+        String rawIdentifier = loginRequest.getUsername().trim();
+        String identifier = rawIdentifier.contains("@")
+                ? rawIdentifier.toLowerCase()
+                : rawIdentifier;
+
+        User user = rawIdentifier.contains("@")
+                ? userRepository.findByEmail(identifier)
+                .orElseThrow(() -> new APIException("Invalid username or password."))
+                : userRepository.findByUserName(identifier)
                 .orElseThrow(() -> new APIException("Invalid username or password."));
 
         if (!user.isEmailVerified()) {
@@ -88,9 +95,9 @@ public class AuthServiceImpl implements AuthService {
             throw new APIException("Email OTP sent to your registered email. Verify OTP to complete registration.");
         }
 
-        Authentication authentication = authenticationManager
-                .authenticate(new UsernamePasswordAuthenticationToken(
-                        loginRequest.getUsername(), loginRequest.getPassword()));
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(identifier, loginRequest.getPassword())
+        );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -102,8 +109,13 @@ public class AuthServiceImpl implements AuthService {
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
 
-        UserInfoResponse response = new UserInfoResponse(userDetails.getId(),
-                userDetails.getUsername(), roles, userDetails.getEmail(), jwtCookie.toString());
+        UserInfoResponse response = new UserInfoResponse(
+                userDetails.getId(),
+                userDetails.getUsername(),
+                roles,
+                userDetails.getEmail(),
+                jwtCookie.toString()
+        );
 
         return new AuthenticationResult(response, jwtCookie);
     }
@@ -141,6 +153,9 @@ public class AuthServiceImpl implements AuthService {
         generateAndSendOtp(pendingRegistration, false);
         return ResponseEntity.ok(new MessageResponse("Registration started. OTP sent to your email. Verify OTP to complete registration."));
     }
+
+
+
 
     @Override
     public ResponseEntity<MessageResponse> verifyEmailOtp(VerifyEmailOtpRequest request) {
@@ -272,28 +287,127 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private void generateAndSendOtp(PendingUserRegistration pendingRegistration, boolean enforceCooldown) {
+
         LocalDateTime now = LocalDateTime.now();
 
         if (enforceCooldown && pendingRegistration.getLastSentAt() != null) {
-            LocalDateTime allowedAt = pendingRegistration.getLastSentAt().plusSeconds(otpResendCooldownSeconds);
+            LocalDateTime allowedAt = pendingRegistration.getLastSentAt()
+                    .plusSeconds(otpResendCooldownSeconds);
+
             if (allowedAt.isAfter(now)) {
-                long remainingSeconds = java.time.Duration.between(now, allowedAt).getSeconds();
-                throw new APIException("Please wait " + remainingSeconds + " seconds before requesting another OTP.");
+                long remainingSeconds =
+                        java.time.Duration.between(now, allowedAt).getSeconds();
+
+                throw new APIException(
+                        "Please wait " + remainingSeconds +
+                                " seconds before requesting another OTP.");
             }
         }
 
+        // reset hourly counter
+        if (pendingRegistration.getSendCountResetAt() == null
+                || pendingRegistration.getSendCountResetAt().isBefore(now)) {
+
+            pendingRegistration.setSendCount(0);
+            pendingRegistration.setSendCountResetAt(now.plusHours(1));
+        }
+
+        // spam protection
+        if (pendingRegistration.getSendCount() >= 5) {
+            throw new APIException(
+                    "Too many OTP requests. Please try again after 1 hour.");
+        }
+
         String otp = generateNumericOtp();
+
         pendingRegistration.setOtpHash(encoder.encode(otp));
         pendingRegistration.setExpiresAt(now.plusMinutes(otpExpiryMinutes));
         pendingRegistration.setAttemptCount(0);
         pendingRegistration.setLastSentAt(now);
 
+        // increase send counter
+        pendingRegistration.setSendCount(
+                pendingRegistration.getSendCount() + 1);
+
         pendingUserRegistrationRepository.save(pendingRegistration);
-        emailOtpNotificationService.sendVerificationOtp(pendingRegistration.getEmail(), otp, otpExpiryMinutes);
+
+        emailOtpNotificationService.sendVerificationOtp(
+                pendingRegistration.getEmail(),
+                otp,
+                otpExpiryMinutes
+        );
+    }
+    @Override
+    public ResponseEntity<MessageResponse> forgotPassword(ForgotPasswordRequest request) {
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new APIException("No account found with this email."));
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByUser(user)
+                .orElse(new PasswordResetToken());
+
+        // Check for cooldown if token exists and hasn't been used yet
+        if (resetToken.getId() != null && !resetToken.isUsed() && resetToken.getCreatedAt() != null) {
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime allowedAt = resetToken.getCreatedAt().plusSeconds(otpResendCooldownSeconds);
+            if (allowedAt.isAfter(now)) {
+                long remainingSeconds = java.time.Duration.between(now, allowedAt).getSeconds();
+                throw new APIException("Please wait " + remainingSeconds + " seconds before requesting another reset link.");
+            }
+        }
+
+        String rawToken = generateSecureToken();
+
+        resetToken.setUser(user);
+        resetToken.setToken(rawToken);
+        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(passwordResetExpiryMinutes));
+        resetToken.setCreatedAt(LocalDateTime.now());
+        resetToken.setUsed(false);
+
+        passwordResetTokenRepository.save(resetToken);
+
+        String resetUrl = resetPasswordBaseUrl + "?token=" + rawToken;
+        emailOtpNotificationService.sendPasswordResetLink(
+                user.getEmail(),
+                resetUrl,
+                passwordResetExpiryMinutes
+        );
+
+        return ResponseEntity.ok(new MessageResponse("Password reset link sent to your email."));
+    }
+
+    @Override
+    public ResponseEntity<MessageResponse> resetPassword(ResetPasswordRequest request) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new APIException("Invalid or expired reset token."));
+
+        if (resetToken.isUsed()) {
+            throw new APIException("Reset token has already been used.");
+        }
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            passwordResetTokenRepository.delete(resetToken);
+            throw new APIException("Reset token has expired.");
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(encoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+
+        return ResponseEntity.ok(new MessageResponse("Password reset successful."));
     }
 
     private String generateNumericOtp() {
         int otpValue = 100000 + SECURE_RANDOM.nextInt(900000);
         return String.valueOf(otpValue);
+    }
+    private String generateSecureToken() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }

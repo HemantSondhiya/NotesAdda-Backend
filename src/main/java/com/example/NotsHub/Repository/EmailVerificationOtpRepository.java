@@ -6,8 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface EmailVerificationOtpRepository extends JpaRepository<EmailVerificationOtp, Long> {
+public interface EmailVerificationOtpRepository extends JpaRepository<EmailVerificationOtp, UUID> {
     Optional<EmailVerificationOtp> findByUser(User user);
 }

@@ -6,6 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Getter
@@ -19,9 +22,10 @@ import java.time.LocalDateTime;
 public class PendingUserRegistration {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "username", nullable = false, length = 20)
     private String username;
@@ -43,4 +47,10 @@ public class PendingUserRegistration {
 
     @Column(name = "last_sent_at", nullable = false)
     private LocalDateTime lastSentAt;
+
+    @Column(name = "send_count", nullable = false)
+    private int sendCount = 0;
+
+    @Column(name = "send_count_reset_at")
+    private LocalDateTime sendCountResetAt;
 }

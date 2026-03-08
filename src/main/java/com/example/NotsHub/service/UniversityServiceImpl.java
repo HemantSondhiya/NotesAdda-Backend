@@ -17,6 +17,7 @@ import com.example.NotsHub.payload.*;
 import com.example.NotsHub.util.SlugUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -52,8 +53,11 @@ public class UniversityServiceImpl implements UniversityService {
     @Autowired
     private NotesRepository notesRepository;
 
+    @Autowired
+    private S3StorageService s3StorageService;
+
     @Override
-    public UniversityDTO createUniversity(UniversityCreateRequest request) {
+    public UniversityDTO createUniversity(UniversityCreateRequest request, MultipartFile logoFile) {
         if (universityRepository.existsByCode(request.getCode().toUpperCase())) {
             throw new APIException(
                     "University with code '" + request.getCode() + "' already exists");
@@ -65,7 +69,12 @@ public class UniversityServiceImpl implements UniversityService {
         university.setDescription(request.getDescription());
         university.setCity(request.getCity());
         university.setState(request.getState());
-        university.setLogoUrl(request.getLogoUrl());
+        if (logoFile != null && !logoFile.isEmpty()) {
+            S3StorageService.UploadResult result = s3StorageService.uploadImage(logoFile, "universities/logos");
+            university.setLogoUrl(result.fileUrl());
+        } else {
+            university.setLogoUrl(request.getLogoUrl());
+        }
         university.setSlug(SlugUtil.makeUnique(SlugUtil.generateSlug(request.getName()), universityRepository::existsBySlug));
         university.setIsActive(true);
 
@@ -89,7 +98,7 @@ public class UniversityServiceImpl implements UniversityService {
     }
 
     @Override
-    public UniversityDTO updateUniversity(UUID id, UniversityCreateRequest request) {
+    public UniversityDTO updateUniversity(UUID id, UniversityCreateRequest request, MultipartFile logoFile) {
         University university = universityRepository.findById(id)
                 .orElseThrow(() -> new APIException("University not found with id: " + id));
 
@@ -104,7 +113,12 @@ public class UniversityServiceImpl implements UniversityService {
         university.setDescription(request.getDescription());
         university.setCity(request.getCity());
         university.setState(request.getState());
-        university.setLogoUrl(request.getLogoUrl());
+        if (logoFile != null && !logoFile.isEmpty()) {
+            S3StorageService.UploadResult result = s3StorageService.uploadImage(logoFile, "universities/logos");
+            university.setLogoUrl(result.fileUrl());
+        } else if (request.getLogoUrl() != null) {
+            university.setLogoUrl(request.getLogoUrl());
+        }
 
         return mapToDTO(universityRepository.save(university));
     }

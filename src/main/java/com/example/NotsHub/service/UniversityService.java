@@ -4,18 +4,19 @@ import com.example.NotsHub.payload.UniversityCreateRequest;
 import com.example.NotsHub.payload.UniversityDTO;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
 
 public interface UniversityService {
-    UniversityDTO createUniversity(@Valid UniversityCreateRequest request);
+    UniversityDTO createUniversity(@Valid UniversityCreateRequest request, MultipartFile logoFile);
 
     Page<UniversityDTO> getAllUniversities(int page, int size);
     
     UniversityDTO getBySlug(String slug);
 
-    UniversityDTO updateUniversity(UUID id, @Valid UniversityCreateRequest request);
+    UniversityDTO updateUniversity(UUID id, @Valid UniversityCreateRequest request, MultipartFile logoFile);
 
     void deleteUniversity(UUID id);
 }
