@@ -7,6 +7,7 @@ import com.example.NotsHub.payload.AuthenticationResult;
 import com.example.NotsHub.security.jwt.JwtUtils;
 import com.example.NotsHub.security.request.*;
 import com.example.NotsHub.security.response.MessageResponse;
+import com.example.NotsHub.security.response.SignupStatusResponse;
 import com.example.NotsHub.security.response.UserInfoResponse;
 import com.example.NotsHub.security.services.UserDetailsImpl;
 import jakarta.transaction.Transactional;
@@ -154,8 +155,39 @@ public class AuthServiceImpl implements AuthService {
         return ResponseEntity.ok(new MessageResponse("Registration started. OTP sent to your email. Verify OTP to complete registration."));
     }
 
+    @Override
+    public ResponseEntity<SignupStatusResponse> getSignupStatus(String email) {
+        String normalizedEmail = email.trim().toLowerCase();
 
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            return ResponseEntity.ok(new SignupStatusResponse("ALREADY_REGISTERED", null, null));
+        }
 
+        return pendingUserRegistrationRepository.findByEmailIgnoreCase(normalizedEmail)
+                .map(pending -> {
+                    LocalDateTime now = LocalDateTime.now();
+
+                    if (pending.getExpiresAt().isBefore(now) || pending.getAttemptCount() >= otpMaxAttempts) {
+                        return ResponseEntity.ok(new SignupStatusResponse("AVAILABLE", null, null));
+                    }
+
+                    long otpExpiresIn = java.time.Duration.between(now, pending.getExpiresAt()).getSeconds();
+                    Long resendCooldown = 0L;
+                    if (pending.getLastSentAt() != null) {
+                        LocalDateTime allowedAt = pending.getLastSentAt().plusSeconds(otpResendCooldownSeconds);
+                        if (allowedAt.isAfter(now)) {
+                            resendCooldown = java.time.Duration.between(now, allowedAt).getSeconds();
+                        }
+                    }
+
+                    return ResponseEntity.ok(new SignupStatusResponse(
+                            "PENDING_VERIFICATION",
+                            Math.max(0, otpExpiresIn),
+                            resendCooldown
+                    ));
+                })
+                .orElse(ResponseEntity.ok(new SignupStatusResponse("AVAILABLE", null, null)));
+    }
 
     @Override
     public ResponseEntity<MessageResponse> verifyEmailOtp(VerifyEmailOtpRequest request) {

@@ -5295,6 +5295,31 @@
                             ]
                         },
                         {
+                            "name": "signup-status",
+                            "request": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{baseUrl}}/api/auth/signup-status?email=test@example.com",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "auth",
+                                        "signup-status"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "email",
+                                            "value": "test@example.com"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
                             "name": "signout",
                             "description": "",
                             "item": [

@@ -7,6 +7,7 @@ import com.example.NotsHub.payload.PagedResponse;
 import com.example.NotsHub.security.request.*;
 import com.example.NotsHub.security.response.UserInfoResponse;
 import com.example.NotsHub.security.response.MessageResponse;
+import com.example.NotsHub.security.response.SignupStatusResponse;
 import com.example.NotsHub.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -38,6 +39,11 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         return authService.register(signUpRequest);
+    }
+
+    @GetMapping("/signup-status")
+    public ResponseEntity<SignupStatusResponse> getSignupStatus(@RequestParam String email) {
+        return authService.getSignupStatus(email);
     }
 
     @PostMapping("/verify-email-otp")
