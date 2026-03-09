@@ -306,7 +306,7 @@
         },
         {
             "name": "Universities",
-            "description": "Manage universities (CRUD + programs)",
+            "description": "Manage universities (CRUD + logo upload to S3)",
             "item": [
                 {
                     "name": "Create University",
@@ -317,17 +317,14 @@
                             "mode": "formdata",
                             "formdata": [
                                 {
-                                    "key": "name",
-                                    "value": "Test University",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "location",
-                                    "value": "New Delhi",
-                                    "type": "text"
+                                    "key": "data",
+                                    "value": "{\n\t\"name\": \"Test University\",\n\t\"code\": \"TU\",\n\t\"description\": \"A sample university description\",\n\t\"city\": \"New Delhi\",\n\t\"state\": \"Delhi\"\n}",
+                                    "type": "text",
+                                    "contentType": "application/json"
                                 },
                                 {
                                     "key": "logo",
+                                    "description": "Optional logo image file — uploads to AWS S3",
                                     "type": "file",
                                     "src": ""
                                 }
@@ -343,7 +340,7 @@
                                 "universities"
                             ]
                         },
-                        "description": "Create a new university with optional logo upload. Requires UNIVERSITY_ADMIN or SUPER_ADMIN."
+                        "description": "Create a university. Send raw JSON in 'data' part, optional logo file in 'logo' part. Logo uploads to AWS S3. Requires UNIVERSITY_ADMIN or SUPER_ADMIN."
                     }
                 },
                 {
@@ -433,17 +430,14 @@
                             "mode": "formdata",
                             "formdata": [
                                 {
-                                    "key": "name",
-                                    "value": "Updated University",
-                                    "type": "text"
-                                },
-                                {
-                                    "key": "location",
-                                    "value": "Mumbai",
-                                    "type": "text"
+                                    "key": "data",
+                                    "value": "{\n\t\"name\": \"Updated University\",\n\t\"code\": \"UU\",\n\t\"description\": \"Updated description\",\n\t\"city\": \"Mumbai\",\n\t\"state\": \"Maharashtra\"\n}",
+                                    "type": "text",
+                                    "contentType": "application/json"
                                 },
                                 {
                                     "key": "logo",
+                                    "description": "Optional logo image file — uploads to AWS S3",
                                     "type": "file",
                                     "src": ""
                                 }
@@ -460,7 +454,7 @@
                                 "{{uuid}}"
                             ]
                         },
-                        "description": "Update a university. Requires UNIVERSITY_ADMIN or SUPER_ADMIN."
+                        "description": "Update a university. Send raw JSON in 'data' part, optional logo file in 'logo' part. Logo uploads to AWS S3. Requires UNIVERSITY_ADMIN or SUPER_ADMIN."
                     }
                 },
                 {
@@ -500,7 +494,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n\t\"name\": \"B.Tech\",\n\t\"universityId\": \"{{uuid}}\"\n}"
+                            "raw": "{\n\t\"name\": \"B.Tech\",\n\t\"description\": \"Bachelor of Technology\",\n\t\"type\": \"UG\",\n\t\"duration\": 4,\n\t\"universityId\": \"{{uuid}}\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/programs",
@@ -624,7 +618,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n\t\"name\": \"M.Tech\",\n\t\"universityId\": \"{{uuid}}\"\n}"
+                            "raw": "{\n\t\"name\": \"M.Tech\",\n\t\"description\": \"Master of Technology\",\n\t\"type\": \"PG\",\n\t\"duration\": 2,\n\t\"universityId\": \"{{uuid}}\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/programs/{{uuid}}",
@@ -677,7 +671,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n\t\"name\": \"Computer Science\",\n\t\"programId\": \"{{uuid}}\"\n}"
+                            "raw": "{\n\t\"name\": \"Computer Science\",\n\t\"code\": \"CS\",\n\t\"programId\": \"{{uuid}}\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/branches",
@@ -801,7 +795,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n\t\"name\": \"Information Technology\",\n\t\"programId\": \"{{uuid}}\"\n}"
+                            "raw": "{\n\t\"name\": \"Information Technology\",\n\t\"code\": \"IT\",\n\t\"programId\": \"{{uuid}}\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/branches/{{uuid}}",
@@ -992,7 +986,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n\t\"name\": \"Data Structures\",\n\t\"code\": \"CS201\",\n\t\"semesterId\": \"{{uuid}}\"\n}"
+                            "raw": "{\n\t\"name\": \"Data Structures\",\n\t\"code\": \"CS201\",\n\t\"credits\": 4,\n\t\"syllabusUrl\": null,\n\t\"semesterId\": \"{{uuid}}\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/subjects",
@@ -1116,7 +1110,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n\t\"name\": \"Algorithms\",\n\t\"code\": \"CS301\",\n\t\"semesterId\": \"{{uuid}}\"\n}"
+                            "raw": "{\n\t\"name\": \"Algorithms\",\n\t\"code\": \"CS301\",\n\t\"credits\": 3,\n\t\"syllabusUrl\": null,\n\t\"semesterId\": \"{{uuid}}\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/subjects/{{uuid}}",
@@ -1198,7 +1192,7 @@
                                 "upload"
                             ]
                         },
-                        "description": "Upload a PDF note. Requires authentication."
+                        "description": "Upload a PDF note. Uses multipart form-data. Requires authentication."
                     }
                 },
                 {
@@ -1305,7 +1299,7 @@
                                 "download"
                             ]
                         },
-                        "description": "Generate a pre-signed S3 download link for a note."
+                        "description": "Generate a pre-signed S3 download link for a note. Requires authentication."
                     }
                 },
                 {
@@ -1320,7 +1314,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n\t\"title\": \"Updated Notes Title\",\n\t\"description\": \"Updated description\",\n\t\"subjectId\": \"{{uuid}}\"\n}"
+                            "raw": "{\n\t\"title\": \"Updated Notes Title\",\n\t\"description\": \"Updated description\",\n\t\"fileUrl\": \"https://s3.example.com/notes/updated-file.pdf\",\n\t\"fileKey\": \"notes/updated-file.pdf\",\n\t\"fileType\": \"PDF\",\n\t\"subjectId\": \"{{uuid}}\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/notes/{{uuid}}",

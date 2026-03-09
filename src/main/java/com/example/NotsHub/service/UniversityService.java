@@ -18,5 +18,7 @@ public interface UniversityService {
 
     UniversityDTO updateUniversity(UUID id, @Valid UniversityCreateRequest request, MultipartFile logoFile);
 
+    UniversityDTO uploadLogo(UUID id, MultipartFile logoFile);
+
     void deleteUniversity(UUID id);
 }

@@ -124,6 +124,21 @@ public class UniversityServiceImpl implements UniversityService {
     }
 
     @Override
+    public UniversityDTO uploadLogo(UUID id, MultipartFile logoFile) {
+        University university = universityRepository.findById(id)
+                .orElseThrow(() -> new APIException("University not found with id: " + id));
+
+        if (logoFile == null || logoFile.isEmpty()) {
+            throw new APIException("Logo file is required");
+        }
+
+        S3StorageService.UploadResult result = s3StorageService.uploadImage(logoFile, "universities/logos");
+        university.setLogoUrl(result.fileUrl());
+
+        return mapToDTO(universityRepository.save(university));
+    }
+
+    @Override
     public void deleteUniversity(UUID id) {
         University university = universityRepository.findById(id)
                 .orElseThrow(() -> new APIException("University not found with id: " + id));

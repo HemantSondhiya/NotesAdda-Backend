@@ -30,11 +30,12 @@ public class UniversityController {
     @Autowired
     private ProgramService programService;
 
+    @Operation(summary = "Create university — send JSON in 'data' part, optional logo file in 'logo' part")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<?> createUniversity(
-            @Valid @ModelAttribute UniversityCreateRequest request,
-            @RequestParam(value = "logo", required = false) MultipartFile logoFile) {
+            @Valid @RequestPart("data") UniversityCreateRequest request,
+            @RequestPart(value = "logo", required = false) MultipartFile logoFile) {
         UniversityDTO universityDTO = universityService.createUniversity(request, logoFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 new APIResponse("University created successfully", true, universityDTO));
@@ -68,12 +69,13 @@ public class UniversityController {
         );
     }
 
+    @Operation(summary = "Update university — send JSON in 'data' part, optional logo file in 'logo' part")
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<?> updateUniversity(
             @PathVariable UUID id,
-            @Valid @ModelAttribute UniversityCreateRequest request,
-            @RequestParam(value = "logo", required = false) MultipartFile logoFile) {
+            @Valid @RequestPart("data") UniversityCreateRequest request,
+            @RequestPart(value = "logo", required = false) MultipartFile logoFile) {
         UniversityDTO updated = universityService.updateUniversity(id, request, logoFile);
         return ResponseEntity.ok(new APIResponse("University updated successfully", true, updated));
     }
