@@ -25,6 +25,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Duration WINDOW = Duration.ofMinutes(1);
     private static final long STALE_ENTRY_AGE_MS = WINDOW.multipliedBy(2).toMillis();
     private static final int SIGNIN_LIMIT = 10;
+    private static final int SIGNUP_LIMIT = 5;
+    private static final int OTP_LIMIT = 5;
+    private static final int FORGOT_PASSWORD_LIMIT = 5;
+    private static final int SIGNUP_STATUS_LIMIT = 20;
     private static final int NOTES_UPLOAD_LIMIT = 30;
     private static final int MAX_COUNTERS = 10_000;
     private static final int CLEANUP_EVERY_N_REQUESTS = 200;
@@ -52,6 +56,16 @@ public class RateLimitFilter extends OncePerRequestFilter {
         int limit = 0;
         if ("POST".equalsIgnoreCase(method) && "/api/auth/signin".equals(path)) {
             limit = SIGNIN_LIMIT;
+        } else if ("POST".equalsIgnoreCase(method) && "/api/auth/signup".equals(path)) {
+            limit = SIGNUP_LIMIT;
+        } else if ("POST".equalsIgnoreCase(method) && "/api/auth/verify-email-otp".equals(path)) {
+            limit = OTP_LIMIT;
+        } else if ("POST".equalsIgnoreCase(method) && "/api/auth/resend-email-otp".equals(path)) {
+            limit = OTP_LIMIT;
+        } else if ("POST".equalsIgnoreCase(method) && "/api/auth/forgot-password".equals(path)) {
+            limit = FORGOT_PASSWORD_LIMIT;
+        } else if ("GET".equalsIgnoreCase(method) && "/api/auth/signup-status".equals(path)) {
+            limit = SIGNUP_STATUS_LIMIT;
         } else if ("POST".equalsIgnoreCase(method) &&
                 ("/api/notes".equals(path) || "/api/notes/upload".equals(path))) {
             limit = NOTES_UPLOAD_LIMIT;

@@ -89,6 +89,7 @@ public class NotesController {
     }
 
     @GetMapping("/{id}/download")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getDownloadLink(@PathVariable UUID id, Authentication authentication) {
         String requesterUsername = authentication != null ? authentication.getName() : null;
         return ResponseEntity.ok(new APIResponse<>(

@@ -19,6 +19,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
@@ -35,6 +43,12 @@ public class WebSecurityConfig {
 
     @Value("${app.security.expose-dev-endpoints:false}")
     private boolean exposeDevEndpoints;
+
+    @Value("${frontend.url:}")
+    private String frontendUrl;
+
+    @Value("${frontend.allowed-origins:}")
+    private String additionalAllowedOrigins;
 
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {
@@ -64,8 +78,7 @@ public class WebSecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {
-                })
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session
@@ -84,7 +97,6 @@ public class WebSecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/notes").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/notes/search").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/notes/slug/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/notes/*/download").permitAll()
                     .requestMatchers("/actuator/health/**").permitAll()
                     .requestMatchers("/actuator/info").permitAll()
                     .requestMatchers("/actuator/**").hasAnyRole("UNIVERSITY_ADMIN", "SUPER_ADMIN")
@@ -130,5 +142,31 @@ public class WebSecurityConfig {
         }));
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        String normalizedFrontendUrl = frontendUrl == null ? "" : frontendUrl.trim().replaceAll("/+$", "");
+        List<String> allowedOrigins = new ArrayList<>();
+        if (!normalizedFrontendUrl.isBlank()) {
+            allowedOrigins.add(normalizedFrontendUrl);
+        }
+        if (additionalAllowedOrigins != null && !additionalAllowedOrigins.isBlank()) {
+            allowedOrigins.addAll(Arrays.stream(additionalAllowedOrigins.split(","))
+                    .map(String::trim)
+                    .map(origin -> origin.replaceAll("/+$", ""))
+                    .filter(origin -> !origin.isBlank())
+                    .collect(Collectors.toList()));
+        }
+
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

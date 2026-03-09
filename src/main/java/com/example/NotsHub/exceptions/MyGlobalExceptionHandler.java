@@ -12,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.security.authentication.BadCredentialsException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -79,6 +80,13 @@ public class MyGlobalExceptionHandler {
         }
 
         APIResponse<?> apiResponse = new APIResponse<>(message, false, null);
+        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<APIResponse<?>> handleBadCredentialsException(BadCredentialsException e) {
+        APIResponse<?> apiResponse = new APIResponse<>(
+                "Invalid username or password.", false, null);
         return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
     }
 

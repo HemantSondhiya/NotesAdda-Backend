@@ -65,7 +65,7 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
-    @org.springframework.beans.factory.annotation.Value("${app.password-reset.expiry-minutes:15}")
+    @org.springframework.beans.factory.annotation.Value("${app.password-reset.expiry-minutes:10}")
     private int passwordResetExpiryMinutes;
 
     @org.springframework.beans.factory.annotation.Value("${app.frontend.reset-password-url:http://localhost:3000/reset-password}")
