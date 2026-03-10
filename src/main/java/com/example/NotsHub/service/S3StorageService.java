@@ -47,7 +47,26 @@ public class S3StorageService {
 
         String extension = ".pdf";
         String key = "notes/" + uploaderUsername + "/" + UUID.randomUUID() + extension;
+        return uploadPdfBytesInternal(file, file.getSize(), key);
+    }
 
+    public UploadResult uploadPdfBytes(byte[] bytes, String uploaderUsername) {
+        ensureBucketConfigured();
+        validatePdfBytes(bytes);
+
+        String key = "notes/" + uploaderUsername + "/" + UUID.randomUUID() + ".pdf";
+        return uploadPdfBytesInternal(bytes, key);
+    }
+
+    public UploadResult uploadPdfToPendingBytes(byte[] bytes, String uploaderUsername) {
+        ensureBucketConfigured();
+        validatePdfBytes(bytes);
+
+        String key = "pending/" + uploaderUsername + "/" + UUID.randomUUID() + ".pdf";
+        return uploadPdfBytesInternal(bytes, key);
+    }
+
+    private UploadResult uploadPdfBytesInternal(MultipartFile file, long contentLength, String key) {
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(key)
@@ -57,11 +76,30 @@ public class S3StorageService {
 
         try {
             try (var inputStream = file.getInputStream()) {
-                s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, file.getSize()));
+                s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, contentLength));
             }
         } catch (IOException e) {
             LOGGER.error("Failed to read uploaded file", e);
             throw new APIException("Failed to read uploaded file");
+        } catch (Exception e) {
+            LOGGER.error("Failed to upload PDF to S3: bucket={}, key={}", bucketName, key, e);
+            throw new APIException("Failed to upload PDF to S3");
+        }
+
+        String fileUrl = "s3://" + bucketName + "/" + key;
+        return new UploadResult(key, fileUrl);
+    }
+
+    private UploadResult uploadPdfBytesInternal(byte[] bytes, String key) {
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .contentType("application/pdf")
+                .contentDisposition("inline")
+                .build();
+
+        try {
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(bytes));
         } catch (Exception e) {
             LOGGER.error("Failed to upload PDF to S3: bucket={}, key={}", bucketName, key, e);
             throw new APIException("Failed to upload PDF to S3");
@@ -79,28 +117,7 @@ public class S3StorageService {
         validatePdf(file);
 
         String key = "pending/" + uploaderUsername + "/" + UUID.randomUUID() + ".pdf";
-
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(key)
-                .contentType("application/pdf")
-                .contentDisposition("inline")
-                .build();
-
-        try {
-            try (var inputStream = file.getInputStream()) {
-                s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, file.getSize()));
-            }
-        } catch (IOException e) {
-            LOGGER.error("Failed to read uploaded file", e);
-            throw new APIException("Failed to read uploaded file");
-        } catch (Exception e) {
-            LOGGER.error("Failed to upload pending PDF to S3: bucket={}, key={}", bucketName, key, e);
-            throw new APIException("Failed to upload PDF");
-        }
-
-        String fileUrl = "s3://" + bucketName + "/" + key;
-        return new UploadResult(key, fileUrl);
+        return uploadPdfBytesInternal(file, file.getSize(), key);
     }
 
     /**
@@ -172,6 +189,18 @@ public class S3StorageService {
         }
     }
 
+    public String extractManagedKeyFromS3Url(String fileUrl) {
+        if (fileUrl == null || fileUrl.isBlank() || bucketName == null || bucketName.isBlank()) {
+            return null;
+        }
+        String prefix = "s3://" + bucketName + "/";
+        if (!fileUrl.startsWith(prefix)) {
+            return null;
+        }
+        String key = fileUrl.substring(prefix.length());
+        return key.isBlank() ? null : key;
+    }
+
     public int getPresignedExpiryMinutes() {
         return presignedExpiryMinutes;
     }
@@ -204,6 +233,22 @@ public class S3StorageService {
             }
         } catch (IOException e) {
             throw new APIException("Failed to validate uploaded file");
+        }
+    }
+
+    private void validatePdfBytes(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            throw new APIException("PDF file is required");
+        }
+        if (bytes.length > MAX_PDF_SIZE_BYTES) {
+            throw new APIException("PDF size must be 10MB or less");
+        }
+        if (bytes.length < 5) {
+            throw new APIException("Invalid PDF file content");
+        }
+        String signature = new String(bytes, 0, 5, StandardCharsets.US_ASCII);
+        if (!"%PDF-".equals(signature)) {
+            throw new APIException("Invalid PDF file content");
         }
     }
 

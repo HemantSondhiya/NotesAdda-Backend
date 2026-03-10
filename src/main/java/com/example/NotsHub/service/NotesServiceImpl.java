@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -41,6 +42,9 @@ public class NotesServiceImpl implements NotesService {
     @Autowired
     private S3StorageService s3StorageService;
 
+    @Autowired
+    private PdfCompressionService pdfCompressionService;
+
 
 
     @Override
@@ -56,20 +60,15 @@ public class NotesServiceImpl implements NotesService {
 
         boolean autoApprove = isAdmin(uploader);
 
-        String checksum = null;
+        byte[] originalPdfBytes;
         try {
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(file.getBytes());
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
-                hexString.append(hex);
-            }
-            checksum = hexString.toString();
-        } catch (Exception e) {
-            throw new APIException("Failed to calculate file checksum");
+            originalPdfBytes = file.getBytes();
+        } catch (Exception ex) {
+            throw new APIException("Failed to read uploaded file");
         }
+
+        byte[] compressedPdfBytes = pdfCompressionService.compress(originalPdfBytes);
+        String checksum = calculateSha256Hex(compressedPdfBytes);
 
         if (!autoApprove) {
             boolean alreadyPending = notesRepository.existsByUploadedByAndSubjectIdAndFileChecksumAndIsApprovedFalse(
@@ -84,10 +83,10 @@ public class NotesServiceImpl implements NotesService {
 
         if (autoApprove) {
             // Admin: upload directly to notes/ prefix
-            uploadResult = s3StorageService.uploadPdf(file, uploaderUsername);
+            uploadResult = s3StorageService.uploadPdfBytes(compressedPdfBytes, uploaderUsername);
         } else {
             // Normal user: upload to pending/ prefix
-            uploadResult = s3StorageService.uploadPdfToPending(file, uploaderUsername);
+            uploadResult = s3StorageService.uploadPdfToPendingBytes(compressedPdfBytes, uploaderUsername);
         }
 
         Notes notes = new Notes();
@@ -300,6 +299,24 @@ public class NotesServiceImpl implements NotesService {
                 .anyMatch(role -> role == AppRole.ROLE_UNIVERSITY_ADMIN || role == AppRole.ROLE_SUPER_ADMIN);
     }
 
+    private String calculateSha256Hex(byte[] content) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(content);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new APIException("Failed to calculate file checksum");
+        }
+    }
+
     private String normalizeAndValidatePdfFileType(String fileType) {
         if (fileType == null || fileType.isBlank()) {
             throw new APIException("File type is required");
@@ -334,12 +351,14 @@ public class NotesServiceImpl implements NotesService {
         if (notes.getUploadedBy() != null) {
             dto.setUploadedById(notes.getUploadedBy().getUserId());
             dto.setUploaderName(notes.getUploadedBy().getUserName());
+            dto.setUploaderEmail(notes.getUploadedBy().getEmail());
             dto.setUploaderTotalNotes(notesRepository.countByUploadedByAndIsApprovedTrue(notes.getUploadedBy()));
         } else {
             dto.setUploaderTotalNotes(0L);
         }
         if (notes.getApprovedBy() != null) {
             dto.setApprovedById(notes.getApprovedBy().getUserId());
+            dto.setApprovedByEmail(notes.getApprovedBy().getEmail());
         }
 
         return dto;

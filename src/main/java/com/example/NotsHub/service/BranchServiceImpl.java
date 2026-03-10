@@ -57,6 +57,7 @@ public class BranchServiceImpl implements BranchService {
         Branch branch = new Branch();
         branch.setName(request.getName());
         branch.setCode(request.getCode());
+        branch.setDescription(request.getDescription());
         branch.setProgram(program);
 
         Branch savedBranch = branchRepository.save(branch);
@@ -95,6 +96,7 @@ public class BranchServiceImpl implements BranchService {
 
         branch.setName(request.getName());
         branch.setCode(request.getCode());
+        branch.setDescription(request.getDescription());
         branch.setProgram(program);
 
         Branch updated = branchRepository.save(branch);
@@ -135,6 +137,7 @@ public class BranchServiceImpl implements BranchService {
         dto.setName(branch.getName());
         dto.setSlug(branch.getSlug());
         dto.setCode(branch.getCode());
+        dto.setDescription(branch.getDescription());
         dto.setProgramId(branch.getProgram().getId());
 
         List<SemesterDTO> semesterDTOs = new ArrayList<>();
@@ -175,6 +178,7 @@ public class BranchServiceImpl implements BranchService {
         dto.setName(branch.getName());
         dto.setSlug(branch.getSlug());
         dto.setCode(branch.getCode());
+        dto.setDescription(branch.getDescription());
         dto.setProgramId(branch.getProgram().getId());
         dto.setSemestersCountTotal(semesterRepository.countByBranchId(branch.getId()));
         dto.setSemesters(new ArrayList<>());

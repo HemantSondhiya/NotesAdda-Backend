@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -113,14 +114,28 @@ public class UniversityServiceImpl implements UniversityService {
         university.setDescription(request.getDescription());
         university.setCity(request.getCity());
         university.setState(request.getState());
-        if (logoFile != null && !logoFile.isEmpty()) {
-            S3StorageService.UploadResult result = s3StorageService.uploadImage(logoFile, "universities/logos");
-            university.setLogoUrl(result.fileUrl());
-        } else if (request.getLogoUrl() != null) {
-            university.setLogoUrl(request.getLogoUrl());
-        }
 
-        return mapToDTO(universityRepository.save(university));
+        String previousLogoUrl = university.getLogoUrl();
+        String newUploadedLogoKey = null;
+
+        try {
+            if (logoFile != null && !logoFile.isEmpty()) {
+                S3StorageService.UploadResult result = s3StorageService.uploadImage(logoFile, "universities/logos");
+                newUploadedLogoKey = result.fileKey();
+                university.setLogoUrl(result.fileUrl());
+            } else if (request.getLogoUrl() != null) {
+                university.setLogoUrl(request.getLogoUrl());
+            }
+
+            University saved = universityRepository.save(university);
+            deleteReplacedLogo(previousLogoUrl, saved.getLogoUrl());
+            return mapToDTO(saved);
+        } catch (RuntimeException ex) {
+            if (newUploadedLogoKey != null) {
+                s3StorageService.deleteFile(newUploadedLogoKey);
+            }
+            throw ex;
+        }
     }
 
     @Override
@@ -132,10 +147,19 @@ public class UniversityServiceImpl implements UniversityService {
             throw new APIException("Logo file is required");
         }
 
+        String previousLogoUrl = university.getLogoUrl();
         S3StorageService.UploadResult result = s3StorageService.uploadImage(logoFile, "universities/logos");
+        String newUploadedLogoKey = result.fileKey();
         university.setLogoUrl(result.fileUrl());
 
-        return mapToDTO(universityRepository.save(university));
+        try {
+            University saved = universityRepository.save(university);
+            deleteReplacedLogo(previousLogoUrl, saved.getLogoUrl());
+            return mapToDTO(saved);
+        } catch (RuntimeException ex) {
+            s3StorageService.deleteFile(newUploadedLogoKey);
+            throw ex;
+        }
     }
 
     @Override
@@ -237,6 +261,7 @@ public class UniversityServiceImpl implements UniversityService {
         dto.setId(branch.getId());
         dto.setName(branch.getName());
         dto.setCode(branch.getCode());
+        dto.setDescription(branch.getDescription());
         dto.setProgramId(program.getId());
 
         List<SemesterDTO> semesterDTOs = semestersByBranchId
@@ -298,8 +323,7 @@ public class UniversityServiceImpl implements UniversityService {
         dto.setId(subject.getId());
         dto.setName(subject.getName());
         dto.setCode(subject.getCode());
-        dto.setCredits(subject.getCredits());
-        dto.setSyllabusUrl(subject.getSyllabusUrl());
+        dto.setDescription(subject.getDescription());
 
         if (subject.getSemester() != null) {
             dto.setSemesterId(subject.getSemester().getId());
@@ -340,5 +364,18 @@ public class UniversityServiceImpl implements UniversityService {
         }
 
         return dto;
+    }
+
+    private void deleteReplacedLogo(String previousLogoUrl, String newLogoUrl) {
+        if (Objects.equals(previousLogoUrl, newLogoUrl)) {
+            return;
+        }
+
+        String previousKey = s3StorageService.extractManagedKeyFromS3Url(previousLogoUrl);
+        String newKey = s3StorageService.extractManagedKeyFromS3Url(newLogoUrl);
+
+        if (previousKey != null && !previousKey.equals(newKey)) {
+            s3StorageService.deleteFile(previousKey);
+        }
     }
 }

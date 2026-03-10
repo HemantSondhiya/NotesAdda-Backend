@@ -13,6 +13,7 @@ public class BranchDTO {
     private String name;
     private String slug;
     private String code;
+    private String description;
     private UUID programId;
     private Long semestersCountTotal;
     private List<SemesterDTO> semesters;

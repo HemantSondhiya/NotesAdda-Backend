@@ -13,6 +13,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -88,6 +90,13 @@ public class MyGlobalExceptionHandler {
         APIResponse<?> apiResponse = new APIResponse<>(
                 "Invalid username or password.", false, null);
         return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler({MaxUploadSizeExceededException.class, MultipartException.class})
+    public ResponseEntity<APIResponse<?>> handleMultipartSizeException(Exception e) {
+        String message = "File is too large. Maximum allowed upload size is 10 MB.";
+        APIResponse<?> apiResponse = new APIResponse<>(message, false, null);
+        return new ResponseEntity<>(apiResponse, HttpStatus.PAYLOAD_TOO_LARGE);
     }
 
     @ExceptionHandler(Exception.class)

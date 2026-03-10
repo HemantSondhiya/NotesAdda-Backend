@@ -43,8 +43,7 @@ public class SubjectServiceImpl implements SubjectService {
         subject.setName(request.getName());
         subject.setCode(request.getCode());
         subject.setSlug(SlugUtil.makeUnique(SlugUtil.generateSlug(request.getName()), subjectRepository::existsBySlug));
-        subject.setCredits(request.getCredits());
-        subject.setSyllabusUrl(request.getSyllabusUrl());
+        subject.setDescription(request.getDescription());
         subject.setSemester(semester);
 
         Subject saved = subjectRepository.save(subject);
@@ -103,8 +102,7 @@ public class SubjectServiceImpl implements SubjectService {
 
         subject.setName(request.getName());
         subject.setCode(request.getCode());
-        subject.setCredits(request.getCredits());
-        subject.setSyllabusUrl(request.getSyllabusUrl());
+        subject.setDescription(request.getDescription());
         subject.setSemester(semester);
 
         Subject updated = subjectRepository.save(subject);
@@ -117,8 +115,7 @@ public class SubjectServiceImpl implements SubjectService {
         dto.setName(saved.getName());
         dto.setSlug(saved.getSlug());
         dto.setCode(saved.getCode());
-        dto.setCredits(saved.getCredits());
-        dto.setSyllabusUrl(saved.getSyllabusUrl());
+        dto.setDescription(saved.getDescription());
         dto.setSemesterId(saved.getSemester().getId());
         dto.setNotesCountTotal(notesRepository.countBySubjectId(saved.getId()));
         dto.setNotes(new ArrayList<>());

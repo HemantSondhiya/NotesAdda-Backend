@@ -165,6 +165,7 @@ public class ProgramServiceImpl implements ProgramService {
         dto.setId(branch.getId());
         dto.setName(branch.getName());
         dto.setCode(branch.getCode());
+        dto.setDescription(branch.getDescription());
 
         if (branch.getProgram() != null) {
             dto.setProgramId(branch.getProgram().getId());

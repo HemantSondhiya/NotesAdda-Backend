@@ -16,6 +16,9 @@ public class BranchCreateRequest {
     @Size(max = 20, message = "Code must be under 20 characters")
     private String code;
 
+    @Size(max = 1000, message = "Description is too long")
+    private String description;
+
     @NotNull(message = "Program ID is required")
     private UUID programId;
 }

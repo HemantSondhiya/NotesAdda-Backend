@@ -31,10 +31,8 @@ public class Subject {
     @Column(length = 30)
     private String code; // e.g. CS301
 
-    private Short credits;
-
-    @Column(name = "syllabus_url")
-    private String syllabusUrl;
+    @Column(length = 1000)
+    private String description;
 
     // Many Subjects → 1 Semester
     @ManyToOne(fetch = FetchType.LAZY)

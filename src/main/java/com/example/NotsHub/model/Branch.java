@@ -31,6 +31,9 @@ public class Branch {
     @Column(nullable = false, length = 20)
     private String code;
 
+    @Column(length = 1000)
+    private String description;
+
     // Many Branches → 1 Program
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "program_id", nullable = false)

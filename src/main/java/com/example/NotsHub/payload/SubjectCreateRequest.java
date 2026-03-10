@@ -2,6 +2,7 @@ package com.example.NotsHub.payload;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import java.util.UUID;
 
@@ -14,10 +15,8 @@ public class SubjectCreateRequest {
     @NotBlank(message = "Subject code is required")
     private String code;
 
-    @NotNull(message = "Credits is required")
-    private Short credits;
-
-    private String syllabusUrl;
+    @Size(max = 1000, message = "Description is too long")
+    private String description;
 
     @NotNull(message = "Semester ID is required")
     private UUID semesterId;

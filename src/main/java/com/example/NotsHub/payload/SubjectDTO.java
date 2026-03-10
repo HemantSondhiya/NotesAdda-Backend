@@ -13,8 +13,7 @@ public class SubjectDTO {
     private String name;
     private String slug;
     private String code;
-    private Short credits;
-    private String syllabusUrl;
+    private String description;
     private UUID semesterId;
     private Long notesCountTotal;
     private List<NotesDTO> notes;

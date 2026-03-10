@@ -30,7 +30,9 @@ public class NotesDTO {
     private UUID subjectId;
     private UUID uploadedById;
     private String uploaderName;
+    private String uploaderEmail;
     private Long uploaderTotalNotes;
     private UUID approvedById;
+    private String approvedByEmail;
 }
 
