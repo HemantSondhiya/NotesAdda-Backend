@@ -159,6 +159,7 @@ public class UniversityServiceImpl implements UniversityService {
         dto.setLogoUrl(university.getLogoUrl());
         dto.setIsActive(university.getIsActive());
         dto.setCreatedAt(university.getCreatedAt());
+        dto.setProgramsCountTotal(programRepository.countByUniversityId(university.getId()));
 
         dto.setPrograms(new ArrayList<>());
         return dto;
@@ -185,6 +186,7 @@ public class UniversityServiceImpl implements UniversityService {
                         notesBySubjectId
                 ))
                 .toList();
+        dto.setProgramsCountTotal((long) programDTOs.size());
         dto.setPrograms(programDTOs);
         return dto;
     }
@@ -218,6 +220,7 @@ public class UniversityServiceImpl implements UniversityService {
                         notesBySubjectId
                 ))
                 .toList();
+        dto.setBranchesCountTotal((long) branchDTOs.size());
         dto.setBranches(branchDTOs);
         return dto;
     }
@@ -249,6 +252,7 @@ public class UniversityServiceImpl implements UniversityService {
                 ))
                 .collect(Collectors.toList());
 
+        dto.setSemestersCountTotal((long) semesterDTOs.size());
         dto.setSemesters(semesterDTOs);
         return dto;
     }
@@ -284,6 +288,7 @@ public class UniversityServiceImpl implements UniversityService {
                 .map(subject -> mapToDTO(subject, notesBySubjectId))
                 .collect(Collectors.toList());
 
+        dto.setSubjectsCountTotal((long) subjectDTOs.size());
         dto.setSubjects(subjectDTOs);
         return dto;
     }
@@ -306,6 +311,7 @@ public class UniversityServiceImpl implements UniversityService {
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
 
+        dto.setNotesCountTotal((long) notesDTOs.size());
         dto.setNotes(notesDTOs);
         return dto;
     }

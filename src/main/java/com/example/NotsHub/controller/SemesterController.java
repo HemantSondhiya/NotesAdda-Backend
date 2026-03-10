@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -50,9 +51,19 @@ public class SemesterController {
         Page<SubjectSummaryItem> summary = subjects.map(s -> new SubjectSummaryItem(
                 s.getId(),
                 s.getName(),
-                s.getCode()
+                s.getCode(),
+                s.getNotesCountTotal()
         ));
-        return ResponseEntity.ok(new APIResponse<>("Subjects retrieved successfully for semester", true, PagedResponse.from(summary)));
+        long notesCountTotal = summary.getContent()
+                .stream()
+                .map(SubjectSummaryItem::notesCountTotal)
+                .filter(count -> count != null)
+                .mapToLong(Long::longValue)
+                .sum();
+        return ResponseEntity.ok(new APIResponse<>("Subjects retrieved successfully for semester", true, Map.of(
+                "subjects", PagedResponse.from(summary),
+                "notesCountTotal", notesCountTotal
+        )));
     }
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
@@ -68,6 +79,6 @@ public class SemesterController {
         return ResponseEntity.ok(new APIResponse<>("Semester updated successfully", true, updated));
     }
 
-    private record SubjectSummaryItem(UUID id, String name, String code) {
+    private record SubjectSummaryItem(UUID id, String name, String code, Long notesCountTotal) {
     }
 }

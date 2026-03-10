@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -61,8 +62,12 @@ public class BranchController {
                 s.getNumber(),
                 s.getSemester()
         ));
+        PagedResponse<SemesterSummaryItem> paged = PagedResponse.from(summary);
         return ResponseEntity.ok(
-                new APIResponse("Semesters retrieved successfully for branch", true, PagedResponse.from(summary))
+                new APIResponse("Semesters retrieved successfully for branch", true, Map.of(
+                        "semesters", paged,
+                        "semestersCountTotal", summary.getTotalElements()
+                ))
         );
     }
 

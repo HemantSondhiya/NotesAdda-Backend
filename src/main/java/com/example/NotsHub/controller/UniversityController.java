@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -46,8 +47,18 @@ public class UniversityController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Page<UniversityDTO> universities = universityService.getAllUniversities(page, size);
+        PagedResponse<UniversityDTO> paged = PagedResponse.from(universities);
+        long programsCountTotal = paged.getContent()
+                .stream()
+                .map(UniversityDTO::getProgramsCountTotal)
+                .filter(count -> count != null)
+                .mapToLong(Long::longValue)
+                .sum();
         return ResponseEntity.status(HttpStatus.OK).body(
-                new APIResponse("Universities", true, PagedResponse.from(universities))
+                new APIResponse("Universities", true, Map.of(
+                        "universities", paged,
+                        "programsCountTotal", programsCountTotal
+                ))
         );
     }
 
@@ -64,8 +75,18 @@ public class UniversityController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Page<ProgramDTO> programs = programService.getProgramsByUniversity(id, page, size);
+        PagedResponse<ProgramDTO> paged = PagedResponse.from(programs);
+        long branchesCountTotal = paged.getContent()
+                .stream()
+                .map(ProgramDTO::getBranchesCountTotal)
+                .filter(count -> count != null)
+                .mapToLong(Long::longValue)
+                .sum();
         return ResponseEntity.ok(
-                new APIResponse("Programs retrieved successfully for university", true, PagedResponse.from(programs))
+                new APIResponse("Programs retrieved successfully for university", true, Map.of(
+                        "programs", paged,
+                        "branchesCountTotal", branchesCountTotal
+                ))
         );
     }
 

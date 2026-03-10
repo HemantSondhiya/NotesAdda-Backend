@@ -21,5 +21,6 @@ public class UniversityDTO {
     private String logoUrl;
     private Boolean isActive;
     private LocalDateTime createdAt;
+    private Long programsCountTotal;
     private List<ProgramDTO> programs;
 }

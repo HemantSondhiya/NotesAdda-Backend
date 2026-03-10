@@ -16,6 +16,7 @@ public class SubjectDTO {
     private Short credits;
     private String syllabusUrl;
     private UUID semesterId;
+    private Long notesCountTotal;
     private List<NotesDTO> notes;
 }
 

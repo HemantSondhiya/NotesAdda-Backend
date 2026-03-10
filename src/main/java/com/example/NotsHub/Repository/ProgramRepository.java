@@ -15,6 +15,7 @@ public interface ProgramRepository extends JpaRepository<Program, UUID> {
 
     List<Program> findByUniversityId(UUID universityId);
     Page<Program> findByUniversityId(UUID universityId, Pageable pageable);
+    long countByUniversityId(UUID universityId);
     boolean existsBySlug(String slug);
     Optional<Program> findBySlug(String slug);
 

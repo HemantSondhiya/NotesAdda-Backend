@@ -22,6 +22,7 @@ public interface SemesterRepository extends JpaRepository<Semester, UUID> {
 
     boolean existsByNumberAndBranchId(Short number, UUID branchId);
     List<Semester> findByBranchId(UUID branchId);
+    long countByBranchId(UUID branchId);
     Page<Semester> findByBranchId(UUID branchId, Pageable pageable);
     List<Semester> findByBranchIdIn(List<UUID> branchIds);
 

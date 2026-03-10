@@ -2,6 +2,7 @@ package com.example.NotsHub.service;
 
 import com.example.NotsHub.Repository.ProgramRepository;
 import com.example.NotsHub.Repository.UniversityRepository;
+import com.example.NotsHub.Repository.BranchRepository;
 import com.example.NotsHub.exceptions.APIException;
 import com.example.NotsHub.model.Branch;
 import com.example.NotsHub.model.Program;
@@ -33,6 +34,9 @@ public class ProgramServiceImpl implements ProgramService {
 
     @Autowired
     private UniversityRepository universityRepository;
+
+    @Autowired
+    private BranchRepository branchRepository;
 
     @Override
     public ProgramDTO createProgram(ProgramCreateRequest request) {
@@ -150,6 +154,7 @@ public class ProgramServiceImpl implements ProgramService {
                     .map(this::mapBranchToDTO)
                     .collect(Collectors.toList());
         }
+        dto.setBranchesCountTotal((long) branchDTOs.size());
         dto.setBranches(branchDTOs);
 
         return dto;
@@ -200,6 +205,7 @@ public class ProgramServiceImpl implements ProgramService {
         if (program.getUniversity() != null) {
             dto.setUniversityId(program.getUniversity().getId());
         }
+        dto.setBranchesCountTotal(branchRepository.countByProgramId(program.getId()));
         dto.setBranches(new ArrayList<>());
         return dto;
     }

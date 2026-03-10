@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -63,7 +64,10 @@ public class SubjectController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Page<NotesDTO> notes = notesService.getNotesBySubject(id, page, size);
-        return ResponseEntity.ok(new APIResponse<>("Notes retrieved successfully for subject", true, PagedResponse.from(notes)));
+        return ResponseEntity.ok(new APIResponse<>("Notes retrieved successfully for subject", true, Map.of(
+                "notes", PagedResponse.from(notes),
+                "notesCountTotal", notes.getTotalElements()
+        )));
     }
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")

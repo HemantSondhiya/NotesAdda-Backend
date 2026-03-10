@@ -11,6 +11,7 @@ import java.util.UUID;
 
 public interface NotesRepository extends JpaRepository<Notes, UUID> {
     List<Notes> findBySubjectId(UUID subjectId);
+    long countBySubjectId(UUID subjectId);
     boolean existsBySlug(String slug);
     Optional<Notes> findBySlug(String slug);
     Page<Notes> findBySubjectIdAndIsApprovedTrue(UUID subjectId, Pageable pageable);

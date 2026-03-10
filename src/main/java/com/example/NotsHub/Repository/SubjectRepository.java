@@ -14,6 +14,7 @@ public interface SubjectRepository extends JpaRepository<Subject, UUID> {
     boolean existsBySlug(String slug);
     Optional<Subject> findBySlug(String slug);
     List<Subject> findBySemesterId(UUID semesterId);
+    long countBySemesterId(UUID semesterId);
     Page<Subject> findBySemesterId(UUID semesterId, Pageable pageable);
     List<Subject> findBySemesterIdIn(List<UUID> semesterIds);
 }

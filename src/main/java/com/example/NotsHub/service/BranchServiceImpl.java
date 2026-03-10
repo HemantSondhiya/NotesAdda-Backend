@@ -147,6 +147,7 @@ public class BranchServiceImpl implements BranchService {
                     .collect(Collectors.toList());
         }
 
+        dto.setSemestersCountTotal((long) semesterDTOs.size());
         dto.setSemesters(semesterDTOs);
 
         return dto;
@@ -175,6 +176,7 @@ public class BranchServiceImpl implements BranchService {
         dto.setSlug(branch.getSlug());
         dto.setCode(branch.getCode());
         dto.setProgramId(branch.getProgram().getId());
+        dto.setSemestersCountTotal(semesterRepository.countByBranchId(branch.getId()));
         dto.setSemesters(new ArrayList<>());
         return dto;
     }

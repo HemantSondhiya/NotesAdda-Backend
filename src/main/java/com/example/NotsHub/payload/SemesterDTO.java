@@ -19,6 +19,7 @@ public class SemesterDTO {
     private String programName;
     private UUID universityId;
     private String universityName;
+    private Long subjectsCountTotal;
     private List<SubjectDTO> subjects;
 }
 

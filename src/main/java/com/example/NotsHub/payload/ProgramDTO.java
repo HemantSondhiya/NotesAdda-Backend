@@ -17,5 +17,6 @@ public class ProgramDTO {
     private String type;
     private Short duration;
     private UUID universityId;
+    private Long branchesCountTotal;
     private List<BranchDTO> branches;
 }

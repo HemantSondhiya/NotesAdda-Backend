@@ -2,6 +2,7 @@ package com.example.NotsHub.service;
 
 import com.example.NotsHub.Repository.BranchRepository;
 import com.example.NotsHub.Repository.SemesterRepository;
+import com.example.NotsHub.Repository.SubjectRepository;
 import com.example.NotsHub.exceptions.APIException;
 import com.example.NotsHub.model.Branch;
 import com.example.NotsHub.model.Semester;
@@ -25,6 +26,9 @@ public class SemesterServiceImpl implements SemesterService {
 
     @Autowired
     private BranchRepository branchRepository;
+
+    @Autowired
+    private SubjectRepository subjectRepository;
 
     @Override
     public SemesterDTO createSemester(SemesterCreateRequest request) {
@@ -110,6 +114,7 @@ public class SemesterServiceImpl implements SemesterService {
                 }
             }
         }
+        dto.setSubjectsCountTotal(subjectRepository.countBySemesterId(semester.getId()));
         dto.setSubjects(new ArrayList<>());
         return dto;
     }
@@ -122,6 +127,7 @@ public class SemesterServiceImpl implements SemesterService {
             dto.setSemester("Semester " + semester.getNumber());
         }
         dto.setBranchId(branchId);
+        dto.setSubjectsCountTotal(subjectRepository.countBySemesterId(semester.getId()));
         dto.setSubjects(new ArrayList<>());
         return dto;
     }

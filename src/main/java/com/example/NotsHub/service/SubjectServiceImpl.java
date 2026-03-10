@@ -1,6 +1,7 @@
 package com.example.NotsHub.service;
 
 import com.example.NotsHub.Repository.SemesterRepository;
+import com.example.NotsHub.Repository.NotesRepository;
 import com.example.NotsHub.Repository.SubjectRepository;
 import com.example.NotsHub.exceptions.APIException;
 import com.example.NotsHub.model.Semester;
@@ -25,6 +26,9 @@ public class SubjectServiceImpl implements SubjectService {
 
     @Autowired
     private SemesterRepository semesterRepository;
+
+    @Autowired
+    private NotesRepository notesRepository;
 
     @Override
     public SubjectDTO createSubject(SubjectCreateRequest request) {
@@ -116,6 +120,7 @@ public class SubjectServiceImpl implements SubjectService {
         dto.setCredits(saved.getCredits());
         dto.setSyllabusUrl(saved.getSyllabusUrl());
         dto.setSemesterId(saved.getSemester().getId());
+        dto.setNotesCountTotal(notesRepository.countBySubjectId(saved.getId()));
         dto.setNotes(new ArrayList<>());
         return dto;
     }

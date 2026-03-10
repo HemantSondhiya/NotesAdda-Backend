@@ -14,6 +14,7 @@ public class BranchDTO {
     private String slug;
     private String code;
     private UUID programId;
+    private Long semestersCountTotal;
     private List<SemesterDTO> semesters;
 }
 

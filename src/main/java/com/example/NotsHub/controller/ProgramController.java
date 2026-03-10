@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -67,8 +68,18 @@ public class ProgramController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Page<BranchDTO> branches = branchService.getBranchesByProgram(id, page, size);
+        PagedResponse<BranchDTO> paged = PagedResponse.from(branches);
+        long semestersCountTotal = paged.getContent()
+                .stream()
+                .map(BranchDTO::getSemestersCountTotal)
+                .filter(count -> count != null)
+                .mapToLong(Long::longValue)
+                .sum();
         return ResponseEntity.ok(
-                new APIResponse("Branches retrieved successfully for program", true, PagedResponse.from(branches))
+                new APIResponse("Branches retrieved successfully for program", true, Map.of(
+                        "branches", paged,
+                        "semestersCountTotal", semestersCountTotal
+                ))
         );
     }
 

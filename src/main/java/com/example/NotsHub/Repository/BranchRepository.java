@@ -18,6 +18,7 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     boolean existsBySlug(String slug);
     Optional<Branch> findBySlug(String slug);
     Page<Branch> findByProgramId(UUID programId, Pageable pageable);
+    long countByProgramId(UUID programId);
     List<Branch> findByProgramIdIn(List<UUID> programIds);
     // Find branch by name and program
     Branch findByNameAndProgramId(String name, UUID programId);
