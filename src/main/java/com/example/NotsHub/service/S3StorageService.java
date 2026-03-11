@@ -29,16 +29,19 @@ public class S3StorageService {
     private final S3Presigner s3Presigner;
     private final String bucketName;
     private final int presignedExpiryMinutes;
+    private final String cdnBaseUrl;
 
     public S3StorageService(
             S3Client s3Client,
             S3Presigner s3Presigner,
             @Value("${aws.s3.bucket}") String bucketName,
-            @Value("${aws.s3.presigned-expiry-minutes:5}") int presignedExpiryMinutes) {
+            @Value("${aws.s3.presigned-expiry-minutes:5}") int presignedExpiryMinutes,
+            @Value("${aws.cdn.base-url:}") String cdnBaseUrl) {
         this.s3Client = s3Client;
         this.s3Presigner = s3Presigner;
         this.bucketName = bucketName;
         this.presignedExpiryMinutes = presignedExpiryMinutes;
+        this.cdnBaseUrl = normalizeBaseUrl(cdnBaseUrl);
     }
 
     public UploadResult uploadPdf(MultipartFile file, String uploaderUsername) {
@@ -86,7 +89,7 @@ public class S3StorageService {
             throw new APIException("Failed to upload PDF to S3");
         }
 
-        String fileUrl = "s3://" + bucketName + "/" + key;
+        String fileUrl = resolveManagedFileUrl(key);
         return new UploadResult(key, fileUrl);
     }
 
@@ -105,7 +108,7 @@ public class S3StorageService {
             throw new APIException("Failed to upload PDF to S3");
         }
 
-        String fileUrl = "s3://" + bucketName + "/" + key;
+        String fileUrl = resolveManagedFileUrl(key);
         return new UploadResult(key, fileUrl);
     }
 
@@ -148,7 +151,7 @@ public class S3StorageService {
             throw new APIException("Failed to approve file upload");
         }
 
-        String fileUrl = "s3://" + bucketName + "/" + approvedKey;
+        String fileUrl = resolveManagedFileUrl(approvedKey);
         return new UploadResult(approvedKey, fileUrl);
     }
 
@@ -174,6 +177,28 @@ public class S3StorageService {
         }
     }
 
+    public String createPresignedViewUrl(String key) {
+        ensureBucketConfigured();
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .responseContentType("application/pdf")
+                    .responseContentDisposition("inline")
+                    .build();
+
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(presignedExpiryMinutes))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            return s3Presigner.presignGetObject(presignRequest).url().toString();
+        } catch (Exception e) {
+            LOGGER.error("Failed to create presigned view URL: bucket={}, key={}", bucketName, key, e);
+            throw new APIException("Failed to create view link");
+        }
+    }
+
     public void deleteFile(String key) {
         if (bucketName == null || bucketName.isBlank() || key == null || key.isBlank()) {
             return;
@@ -190,19 +215,46 @@ public class S3StorageService {
     }
 
     public String extractManagedKeyFromS3Url(String fileUrl) {
-        if (fileUrl == null || fileUrl.isBlank() || bucketName == null || bucketName.isBlank()) {
+        if (fileUrl == null || fileUrl.isBlank()) {
             return null;
         }
-        String prefix = "s3://" + bucketName + "/";
-        if (!fileUrl.startsWith(prefix)) {
-            return null;
+
+        if (bucketName != null && !bucketName.isBlank()) {
+            String s3Prefix = "s3://" + bucketName + "/";
+            if (fileUrl.startsWith(s3Prefix)) {
+                String key = fileUrl.substring(s3Prefix.length());
+                return key.isBlank() ? null : key;
+            }
         }
-        String key = fileUrl.substring(prefix.length());
-        return key.isBlank() ? null : key;
+
+        if (cdnBaseUrl != null && !cdnBaseUrl.isBlank()) {
+            String cdnPrefix = cdnBaseUrl + "/";
+            if (fileUrl.startsWith(cdnPrefix)) {
+                String key = fileUrl.substring(cdnPrefix.length());
+                return key.isBlank() ? null : key;
+            }
+        }
+
+        return null;
     }
 
     public int getPresignedExpiryMinutes() {
         return presignedExpiryMinutes;
+    }
+
+    public String createCdnViewUrl(String key) {
+        if (key == null || key.isBlank() || cdnBaseUrl == null || cdnBaseUrl.isBlank()) {
+            return null;
+        }
+        return cdnBaseUrl + "/" + key;
+    }
+
+    private String resolveManagedFileUrl(String key) {
+        String cdnUrl = createCdnViewUrl(key);
+        if (cdnUrl != null && !cdnUrl.isBlank()) {
+            return cdnUrl;
+        }
+        throw new APIException("CDN base URL is not configured");
     }
 
     private void ensureBucketConfigured() {
@@ -258,6 +310,13 @@ public class S3StorageService {
         return normalized.endsWith(".pdf") ? normalized : normalized + ".pdf";
     }
 
+    private String normalizeBaseUrl(String baseUrl) {
+        if (baseUrl == null) {
+            return "";
+        }
+        return baseUrl.trim().replaceAll("/+$", "");
+    }
+
     public UploadResult uploadImage(MultipartFile file, String folderPrefix) {
         ensureBucketConfigured();
         validateImage(file);
@@ -288,7 +347,7 @@ public class S3StorageService {
             throw new APIException("Failed to upload image to S3");
         }
 
-        String fileUrl = "s3://" + bucketName + "/" + key;
+        String fileUrl = resolveManagedFileUrl(key);
         return new UploadResult(key, fileUrl);
     }
 

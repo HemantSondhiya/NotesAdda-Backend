@@ -22,6 +22,7 @@ public class NotesDTO {
     private String fileKey;
 
     private String downloadUrl;
+    private String viewUrl;
     private String fileType; // PDF | DOCX | PPTX | IMAGE
     private Boolean isApproved;
     private String rejectionNote;

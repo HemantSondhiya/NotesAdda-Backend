@@ -1,8 +1,8 @@
 package com.example.NotsHub.controller;
 
 import com.example.NotsHub.payload.APIResponse;
-import com.example.NotsHub.payload.NotesCreateRequest;
 import com.example.NotsHub.payload.NotesDTO;
+import com.example.NotsHub.payload.NotesUpdateRequest;
 import com.example.NotsHub.payload.PagedResponse;
 import com.example.NotsHub.service.NotesService;
 import jakarta.validation.Valid;
@@ -53,7 +53,7 @@ public class NotesController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<?> updateNotes(@PathVariable UUID id,
-                                         @Valid @RequestBody NotesCreateRequest request,
+                                         @Valid @RequestBody NotesUpdateRequest request,
                                          Authentication authentication) {
         NotesDTO notesDTO = notesService.updateNotes(id, request, authentication.getName());
         return ResponseEntity.ok(new APIResponse<>("Notes updated successfully", true, notesDTO));
@@ -88,6 +88,35 @@ public class NotesController {
         return ResponseEntity.ok(new APIResponse<>("Notes search completed successfully", true, PagedResponse.from(notes)));
     }
 
+    @GetMapping("/all-notes")
+    @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
+    @Operation(summary = "Admin list: all notes, approved, pending, or rejected")
+    public ResponseEntity<?> getAllNotesForAdmin(
+            @RequestParam(required = false) Boolean isApproved,
+            @RequestParam(required = false) Boolean reject,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<NotesDTO> notes = notesService.getAllNotesForAdmin(isApproved, reject, page, size);
+        return ResponseEntity.ok(new APIResponse<>("All notes retrieved successfully", true, PagedResponse.from(notes)));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getMyNotes(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) Boolean isApproved,
+            @RequestParam(required = false) Boolean reject,
+            @RequestParam(required = false) Boolean approved,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Authentication authentication) {
+        String searchText = (q != null && !q.isBlank()) ? q : query;
+        Boolean effectiveIsApproved = isApproved != null ? isApproved : approved;
+        Page<NotesDTO> notes = notesService.getMyNotes(authentication.getName(), searchText, effectiveIsApproved, reject, page, size);
+        return ResponseEntity.ok(new APIResponse<>("My notes retrieved successfully", true, PagedResponse.from(notes)));
+    }
+
     @GetMapping("/{id}/download")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getDownloadLink(@PathVariable UUID id, Authentication authentication) {
@@ -99,9 +128,19 @@ public class NotesController {
         ));
     }
 
-    @PutMapping("/{id}/approve")
+    @GetMapping("/{id}/admin/view")
     @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
-    public ResponseEntity<?> approveNotes(@PathVariable UUID id, Authentication authentication) {
+    public ResponseEntity<?> getAdminViewLink(@PathVariable UUID id) {
+        return ResponseEntity.ok(new APIResponse<>(
+                "Admin view link generated successfully",
+                true,
+                notesService.generateAdminViewLink(id)
+        ));
+    }
+
+    @PutMapping("/{id}/admin/approve")
+    @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> approveNotesFromAdminReview(@PathVariable UUID id, Authentication authentication) {
         NotesDTO notesDTO = notesService.approveNotes(id, authentication.getName());
         return ResponseEntity.ok(new APIResponse<>("Notes approved successfully", true, notesDTO));
     }

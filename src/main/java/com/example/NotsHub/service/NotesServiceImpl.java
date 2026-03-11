@@ -9,8 +9,8 @@ import com.example.NotsHub.model.Notes;
 import com.example.NotsHub.model.Role;
 import com.example.NotsHub.model.Subject;
 import com.example.NotsHub.model.User;
-import com.example.NotsHub.payload.NotesCreateRequest;
 import com.example.NotsHub.payload.NotesDTO;
+import com.example.NotsHub.payload.NotesUpdateRequest;
 import com.example.NotsHub.util.SlugUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -71,7 +71,7 @@ public class NotesServiceImpl implements NotesService {
         String checksum = calculateSha256Hex(compressedPdfBytes);
 
         if (!autoApprove) {
-            boolean alreadyPending = notesRepository.existsByUploadedByAndSubjectIdAndFileChecksumAndIsApprovedFalse(
+            boolean alreadyPending = notesRepository.existsByUploadedByAndSubjectIdAndFileChecksumAndIsApprovedFalseAndRejectionNoteIsNull(
                     uploader, subjectId, checksum
             );
             if (alreadyPending) {
@@ -117,7 +117,7 @@ public class NotesServiceImpl implements NotesService {
     }
 
     @Override
-    public NotesDTO updateNotes(UUID notesId, NotesCreateRequest request, String updaterUsername) {
+    public NotesDTO updateNotes(UUID notesId, NotesUpdateRequest request, String updaterUsername) {
         Notes notes = notesRepository.findById(notesId)
                 .orElseThrow(() -> new APIException("Notes not found with id: " + notesId));
 
@@ -128,20 +128,8 @@ public class NotesServiceImpl implements NotesService {
             throw new APIException("Only admin can update notes");
         }
 
-        Subject subject = subjectRepository.findById(request.getSubjectId())
-                .orElseThrow(() -> new APIException("Subject not found with id: " + request.getSubjectId()));
-
-        notes.setTitle(request.getTitle());
+        notes.setTitle(request.getTitle().trim());
         notes.setDescription(request.getDescription());
-        notes.setFileUrl(request.getFileUrl());
-        notes.setFileKey(request.getFileKey());
-        notes.setFileType(normalizeAndValidatePdfFileType(request.getFileType()));
-        notes.setSubject(subject);
-
-        notes.setIsApproved(true);
-        notes.setApprovedBy(updater);
-        notes.setApprovedAt(LocalDateTime.now());
-        notes.setRejectionNote(null);
 
         Notes saved = notesRepository.save(notes);
         return mapToDTO(saved);
@@ -181,15 +169,13 @@ public class NotesServiceImpl implements NotesService {
         }
 
         notes.setIsApproved(false);
-        notes.setRejectionNote(rejectionNote);
+        notes.setRejectionNote((rejectionNote == null || rejectionNote.isBlank()) ? "Rejected by admin" : rejectionNote.trim());
         notes.setApprovedBy(null);
         notes.setApprovedAt(null);
-        
-        // Delete the pending file from S3 to save space, since it's rejected
-        if (notes.getFileKey() != null) {
+
+        // For user uploads, file is stored under pending/. Delete object on rejection.
+        if (notes.getFileKey() != null && notes.getFileKey().startsWith("pending/")) {
             s3StorageService.deleteFile(notes.getFileKey());
-            notes.setFileKey(null);
-            notes.setFileUrl(null);
         }
 
         Notes saved = notesRepository.save(notes);
@@ -202,13 +188,12 @@ public class NotesServiceImpl implements NotesService {
         Notes notes = notesRepository.findById(notesId)
                 .orElseThrow(() -> new APIException("Notes not found with id: " + notesId));
 
+        if (!Boolean.TRUE.equals(notes.getIsApproved()) && notes.getRejectionNote() != null) {
+            throw new APIException("Rejected notes are not available for download");
+        }
+
         if (Boolean.TRUE.equals(notes.getIsApproved())) {
-            String downloadName = notes.getTitle() == null ? "notes.pdf" : notes.getTitle() + ".pdf";
-            String downloadUrl = s3StorageService.createPresignedDownloadUrl(notes.getFileKey(), downloadName);
-            return Map.of(
-                    "downloadUrl", downloadUrl,
-                    "expiresInMinutes", String.valueOf(s3StorageService.getPresignedExpiryMinutes())
-            );
+            return Map.of("downloadUrl", requireCdnDownloadUrl(notes));
         }
 
         if (requesterUsername == null || requesterUsername.isBlank()) {
@@ -226,19 +211,157 @@ public class NotesServiceImpl implements NotesService {
             throw new APIException("You are not allowed to download this note");
         }
 
-        String downloadName = notes.getTitle() == null ? "notes.pdf" : notes.getTitle() + ".pdf";
-        String downloadUrl = s3StorageService.createPresignedDownloadUrl(notes.getFileKey(), downloadName);
+        return Map.of("downloadUrl", requireCdnDownloadUrl(notes));
+    }
 
-        return Map.of(
-                "downloadUrl", downloadUrl,
-                "expiresInMinutes", String.valueOf(s3StorageService.getPresignedExpiryMinutes())
-        );
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, String> generateAdminViewLink(UUID notesId) {
+        Notes notes = notesRepository.findById(notesId)
+                .orElseThrow(() -> new APIException("Notes not found with id: " + notesId));
+
+        String viewUrl = s3StorageService.createCdnViewUrl(notes.getFileKey());
+        if (viewUrl == null || viewUrl.isBlank()) {
+            throw new APIException("CDN base URL is not configured");
+        }
+        return Map.of("viewUrl", viewUrl);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<NotesDTO> getAllNotes(int page, int size) {
         return notesRepository.findByIsApprovedTrue(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")))
+                .map(this::mapToDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NotesDTO> getAllNotesForAdmin(@Nullable Boolean isApproved, @Nullable Boolean reject, int page, int size) {
+        if (Boolean.TRUE.equals(reject) && isApproved != null) {
+            throw new APIException("Use either isApproved or reject=true, not both");
+        }
+
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        if (Boolean.TRUE.equals(reject)) {
+            return notesRepository.findByIsApprovedFalseAndRejectionNoteIsNotNull(pageable).map(this::mapToDTO);
+        }
+
+        if (isApproved == null) {
+            return notesRepository.findAll(pageable).map(this::mapToDTO);
+        }
+
+        if (Boolean.TRUE.equals(isApproved)) {
+            return notesRepository.findByIsApprovedTrue(pageable).map(this::mapToDTO);
+        }
+
+        return notesRepository.findByIsApprovedFalseAndRejectionNoteIsNull(pageable).map(this::mapToDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NotesDTO> getAdminNotes(@Nullable String query, @Nullable Boolean approved, int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        String normalizedQuery = query == null ? "" : query.trim();
+
+        if (normalizedQuery.isEmpty()) {
+            if (approved == null) {
+                return notesRepository.findAll(pageable).map(this::mapToDTO);
+            }
+            return notesRepository.findByIsApproved(approved, pageable).map(this::mapToDTO);
+        }
+
+        if (approved == null) {
+            return notesRepository
+                    .findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
+                            normalizedQuery,
+                            normalizedQuery,
+                            pageable
+                    )
+                    .map(this::mapToDTO);
+        }
+
+        return notesRepository
+                .findByIsApprovedAndTitleContainingIgnoreCaseOrIsApprovedAndDescriptionContainingIgnoreCase(
+                        approved,
+                        normalizedQuery,
+                        approved,
+                        normalizedQuery,
+                        pageable
+                )
+                .map(this::mapToDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NotesDTO> getMyNotes(String requesterUsername, @Nullable String query, @Nullable Boolean isApproved, @Nullable Boolean reject, int page, int size) {
+        User requester = userRepository.findByUserName(requesterUsername)
+                .orElseThrow(() -> new APIException("User not found: " + requesterUsername));
+
+        if (Boolean.TRUE.equals(reject) && isApproved != null) {
+            throw new APIException("Use either isApproved or reject=true, not both");
+        }
+
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        String normalizedQuery = query == null ? "" : query.trim();
+
+        if (normalizedQuery.isEmpty()) {
+            if (Boolean.TRUE.equals(reject)) {
+                return notesRepository.findByUploadedByAndIsApprovedFalseAndRejectionNoteIsNotNull(requester, pageable).map(this::mapToDTO);
+            }
+            if (isApproved == null) {
+                return notesRepository.findByUploadedBy(requester, pageable).map(this::mapToDTO);
+            }
+            if (Boolean.TRUE.equals(isApproved)) {
+                return notesRepository.findByUploadedByAndIsApprovedTrue(requester, pageable).map(this::mapToDTO);
+            }
+            return notesRepository.findByUploadedByAndIsApprovedFalseAndRejectionNoteIsNull(requester, pageable).map(this::mapToDTO);
+        }
+
+        if (Boolean.TRUE.equals(reject)) {
+            return notesRepository
+                    .findByUploadedByAndIsApprovedFalseAndRejectionNoteIsNotNullAndTitleContainingIgnoreCaseOrUploadedByAndIsApprovedFalseAndRejectionNoteIsNotNullAndDescriptionContainingIgnoreCase(
+                            requester,
+                            normalizedQuery,
+                            requester,
+                            normalizedQuery,
+                            pageable
+                    )
+                    .map(this::mapToDTO);
+        }
+
+        if (isApproved == null) {
+            return notesRepository
+                    .findByUploadedByAndTitleContainingIgnoreCaseOrUploadedByAndDescriptionContainingIgnoreCase(
+                            requester,
+                            normalizedQuery,
+                            requester,
+                            normalizedQuery,
+                            pageable
+                    )
+                    .map(this::mapToDTO);
+        }
+
+        if (Boolean.TRUE.equals(isApproved)) {
+            return notesRepository
+                    .findByUploadedByAndIsApprovedTrueAndTitleContainingIgnoreCaseOrUploadedByAndIsApprovedTrueAndDescriptionContainingIgnoreCase(
+                            requester,
+                            normalizedQuery,
+                            requester,
+                            normalizedQuery,
+                            pageable
+                    )
+                    .map(this::mapToDTO);
+        }
+
+        return notesRepository
+                .findByUploadedByAndIsApprovedFalseAndRejectionNoteIsNullAndTitleContainingIgnoreCaseOrUploadedByAndIsApprovedFalseAndRejectionNoteIsNullAndDescriptionContainingIgnoreCase(
+                        requester,
+                        normalizedQuery,
+                        requester,
+                        normalizedQuery,
+                        pageable
+                )
                 .map(this::mapToDTO);
     }
 
@@ -317,15 +440,12 @@ public class NotesServiceImpl implements NotesService {
         }
     }
 
-    private String normalizeAndValidatePdfFileType(String fileType) {
-        if (fileType == null || fileType.isBlank()) {
-            throw new APIException("File type is required");
+    private String requireCdnDownloadUrl(Notes notes) {
+        String downloadUrl = s3StorageService.createCdnViewUrl(notes.getFileKey());
+        if (downloadUrl == null || downloadUrl.isBlank()) {
+            throw new APIException("CDN base URL is not configured");
         }
-        String normalized = fileType.trim().toUpperCase();
-        if (!"PDF".equals(normalized)) {
-            throw new APIException("Only PDF file type is allowed");
-        }
-        return normalized;
+        return downloadUrl;
     }
 
     private NotesDTO mapToDTO(Notes notes) {
@@ -347,6 +467,11 @@ public class NotesServiceImpl implements NotesService {
         }
         if (notes.getId() != null) {
             dto.setDownloadUrl("/api/notes/" + notes.getId() + "/download");
+        }
+        if (!Boolean.TRUE.equals(notes.getIsApproved()) && notes.getRejectionNote() != null) {
+            dto.setViewUrl(null);
+        } else {
+            dto.setViewUrl(s3StorageService.createCdnViewUrl(notes.getFileKey()));
         }
         if (notes.getUploadedBy() != null) {
             dto.setUploadedById(notes.getUploadedBy().getUserId());

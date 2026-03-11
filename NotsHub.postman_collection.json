@@ -1263,6 +1263,94 @@
                     }
                 },
                 {
+                    "name": "Get My Notes",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/notes/me?page=0&size=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "notes",
+                                "me"
+                            ],
+                            "query": [
+                                {
+                                    "key": "isApproved",
+                                    "value": "true",
+                                    "description": "Optional: true=approved, false=pending",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "reject",
+                                    "value": "true",
+                                    "description": "Optional: true=rejected",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "20"
+                                },
+                                {
+                                    "key": "q",
+                                    "value": "",
+                                    "description": "Optional search query",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Get notes uploaded by the authenticated user. Filters: all, approved, pending, rejected."
+                    }
+                },
+                {
+                    "name": "All Notes (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/notes/all-notes?page=0&size=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "notes",
+                                "all-notes"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "0"
+                                },
+                                {
+                                    "key": "size",
+                                    "value": "20"
+                                },
+                                {
+                                    "key": "isApproved",
+                                    "value": "true",
+                                    "description": "Optional: true=approved, false=pending",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "reject",
+                                    "value": "true",
+                                    "description": "Optional: true=rejected",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Admin notes listing with filters: all, approved, pending, rejected."
+                    }
+                },
+                {
                     "name": "Get Notes by Slug",
                     "request": {
                         "method": "GET",
@@ -1303,6 +1391,27 @@
                     }
                 },
                 {
+                    "name": "Admin View Notes PDF",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/notes/{{uuid}}/admin/view",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "notes",
+                                "{{uuid}}",
+                                "admin",
+                                "view"
+                            ]
+                        },
+                        "description": "Generate admin-only pre-signed inline PDF view link for a note."
+                    }
+                },
+                {
                     "name": "Update Notes",
                     "request": {
                         "method": "PUT",
@@ -1331,12 +1440,12 @@
                     }
                 },
                 {
-                    "name": "Approve Notes",
+                    "name": "Admin Approve Notes",
                     "request": {
                         "method": "PUT",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/api/notes/{{uuid}}/approve",
+                            "raw": "{{baseUrl}}/api/notes/{{uuid}}/admin/approve",
                             "host": [
                                 "{{baseUrl}}"
                             ],
@@ -1344,10 +1453,11 @@
                                 "api",
                                 "notes",
                                 "{{uuid}}",
+                                "admin",
                                 "approve"
                             ]
                         },
-                        "description": "Approve pending notes. Requires UNIVERSITY_ADMIN or SUPER_ADMIN."
+                        "description": "Admin workflow endpoint to approve note after viewing it."
                     }
                 },
                 {

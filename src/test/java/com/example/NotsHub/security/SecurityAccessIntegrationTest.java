@@ -108,8 +108,47 @@ class SecurityAccessIntegrationTest {
     }
 
     @Test
-    void downloadNote_shouldNotRequireAuthentication() throws Exception {
+    void downloadNote_shouldRequireAuthentication() throws Exception {
         mockMvc.perform(get("/api/notes/{id}/download", "6730fd14-b6b6-460e-8ec2-a0bf7d00f216"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void myNotes_shouldReturn401_whenUnauthenticated() throws Exception {
+        mockMvc.perform(get("/api/notes/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminViewLink_shouldReturn401_whenUnauthenticated() throws Exception {
+        mockMvc.perform(get("/api/notes/{id}/admin/view", "6730fd14-b6b6-460e-8ec2-a0bf7d00f216"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "student1", roles = {"STUDENT"})
+    void adminViewLink_shouldReturn403_forStudentRole() throws Exception {
+        mockMvc.perform(get("/api/notes/{id}/admin/view", "6730fd14-b6b6-460e-8ec2-a0bf7d00f216"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminNotes_shouldReturn401_whenUnauthenticated() throws Exception {
+        mockMvc.perform(get("/api/notes/admin"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "student1", roles = {"STUDENT"})
+    void adminNotes_shouldReturn403_forStudentRole() throws Exception {
+        mockMvc.perform(get("/api/notes/admin"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "admin1", roles = {"UNIVERSITY_ADMIN"})
+    void adminNotes_shouldReturn200_forAdminRole() throws Exception {
+        mockMvc.perform(get("/api/notes/admin"))
+                .andExpect(status().isOk());
     }
 }

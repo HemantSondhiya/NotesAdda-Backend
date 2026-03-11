@@ -9,7 +9,7 @@ import com.example.NotsHub.model.Notes;
 import com.example.NotsHub.model.Role;
 import com.example.NotsHub.model.Subject;
 import com.example.NotsHub.model.User;
-import com.example.NotsHub.payload.NotesCreateRequest;
+import com.example.NotsHub.payload.NotesUpdateRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,25 +49,23 @@ class NotesServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private S3StorageService s3StorageService;
+    @Mock
+    private PdfCompressionService pdfCompressionService;
 
     @InjectMocks
     private NotesServiceImpl notesService;
 
     private Subject subject;
-    private NotesCreateRequest request;
+    private NotesUpdateRequest request;
 
     @BeforeEach
     void setUp() {
         subject = new Subject();
         subject.setId(UUID.randomUUID());
 
-        request = new NotesCreateRequest();
+        request = new NotesUpdateRequest();
         request.setTitle("t");
         request.setDescription("d");
-        request.setFileUrl("https://example.com/a.pdf");
-        request.setFileKey("notes/a.pdf");
-        request.setFileType("pdf");
-        request.setSubjectId(subject.getId());
     }
 
 
@@ -95,14 +93,12 @@ class NotesServiceImplTest {
         notes.setIsApproved(true);
 
         when(notesRepository.findById(notesId)).thenReturn(Optional.of(notes));
-        when(s3StorageService.createPresignedDownloadUrl("notes/u/approved.pdf", "approved-note.pdf"))
+        when(s3StorageService.createCdnViewUrl("notes/u/approved.pdf"))
                 .thenReturn("https://download.example");
-        when(s3StorageService.getPresignedExpiryMinutes()).thenReturn(5);
 
         Map<String, String> result = notesService.generateDownloadLink(notesId, null);
 
         assertEquals("https://download.example", result.get("downloadUrl"));
-        assertEquals("5", result.get("expiresInMinutes"));
         verify(userRepository, never()).findByUserName(any());
     }
 
@@ -119,7 +115,7 @@ class NotesServiceImplTest {
 
         APIException ex = assertThrows(APIException.class, () -> notesService.generateDownloadLink(notesId, null));
         assertEquals("Only approved notes are available for public download", ex.getMessage());
-        verify(s3StorageService, never()).createPresignedDownloadUrl(any(), any());
+        verify(s3StorageService, never()).createCdnViewUrl(any());
     }
 
     @Test
@@ -128,12 +124,14 @@ class NotesServiceImplTest {
         String key = "notes/student1/temp.pdf";
 
         MultipartFile mockFile = mock(MultipartFile.class);
-        when(mockFile.getBytes()).thenReturn("dummy".getBytes());
+        byte[] originalPdf = "%PDF-1.4 dummy".getBytes();
+        when(mockFile.getBytes()).thenReturn(originalPdf);
+        when(pdfCompressionService.compress(originalPdf)).thenReturn(originalPdf);
 
         when(subjectRepository.findById(subject.getId())).thenReturn(Optional.of(subject));
         when(userRepository.findByUserName("student1")).thenReturn(Optional.of(student));
-        when(s3StorageService.uploadPdfToPending(any(), eq("student1")))
-                .thenReturn(new S3StorageService.UploadResult(key, "s3://bucket/" + key));
+        when(s3StorageService.uploadPdfToPendingBytes(any(), eq("student1")))
+                .thenReturn(new S3StorageService.UploadResult(key, "https://cdn.example/" + key));
         when(notesRepository.save(any(Notes.class))).thenThrow(new RuntimeException("db down"));
 
         assertThrows(RuntimeException.class,
