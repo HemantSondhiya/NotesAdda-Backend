@@ -29,6 +29,7 @@ public class NotesDTO {
     private LocalDateTime createdAt;
     private LocalDateTime approvedAt;
     private UUID subjectId;
+    private String subjectName;
     private UUID uploadedById;
     private String uploaderName;
     private String uploaderEmail;

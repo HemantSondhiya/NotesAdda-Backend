@@ -464,6 +464,7 @@ public class NotesServiceImpl implements NotesService {
 
         if (notes.getSubject() != null) {
             dto.setSubjectId(notes.getSubject().getId());
+            dto.setSubjectName(notes.getSubject().getName());
         }
         if (notes.getId() != null) {
             dto.setDownloadUrl("/api/notes/" + notes.getId() + "/download");
