@@ -93,7 +93,7 @@ class NotesServiceImplTest {
         notes.setIsApproved(true);
 
         when(notesRepository.findById(notesId)).thenReturn(Optional.of(notes));
-        when(s3StorageService.createCdnViewUrl("notes/u/approved.pdf"))
+        when(s3StorageService.createPresignedDownloadUrl(eq("notes/u/approved.pdf"), eq("approved-note.pdf")))
                 .thenReturn("https://download.example");
 
         Map<String, String> result = notesService.generateDownloadLink(notesId, null);
@@ -115,7 +115,7 @@ class NotesServiceImplTest {
 
         APIException ex = assertThrows(APIException.class, () -> notesService.generateDownloadLink(notesId, null));
         assertEquals("Only approved notes are available for public download", ex.getMessage());
-        verify(s3StorageService, never()).createCdnViewUrl(any());
+        verify(s3StorageService, never()).createPresignedDownloadUrl(any(), any());
     }
 
     @Test

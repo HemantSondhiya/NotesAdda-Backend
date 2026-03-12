@@ -441,11 +441,25 @@ public class NotesServiceImpl implements NotesService {
     }
 
     private String requireCdnDownloadUrl(Notes notes) {
-        String downloadUrl = s3StorageService.createCdnViewUrl(notes.getFileKey());
+        String downloadUrl = s3StorageService.createPresignedDownloadUrl(
+                notes.getFileKey(),
+                buildDownloadFileName(notes)
+        );
         if (downloadUrl == null || downloadUrl.isBlank()) {
-            throw new APIException("CDN base URL is not configured");
+            throw new APIException("Failed to create download link");
         }
         return downloadUrl;
+    }
+
+    private String buildDownloadFileName(Notes notes) {
+        if (notes == null) {
+            return "notes.pdf";
+        }
+        String title = notes.getTitle();
+        if (title == null || title.isBlank()) {
+            return "notes-" + notes.getId() + ".pdf";
+        }
+        return title.trim() + ".pdf";
     }
 
     private NotesDTO mapToDTO(Notes notes) {

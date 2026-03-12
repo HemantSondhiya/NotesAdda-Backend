@@ -56,7 +56,7 @@ class SecurityAccessIntegrationTest {
     @Test
     @WithMockUser(username = "student1", roles = {"STUDENT"})
     void approveNotes_shouldReturn403_forNonAdminRole() throws Exception {
-        mockMvc.perform(put("/api/notes/{id}/approve", "6730fd14-b6b6-460e-8ec2-a0bf7d00f216"))
+        mockMvc.perform(put("/api/notes/{id}/admin/approve", "6730fd14-b6b6-460e-8ec2-a0bf7d00f216"))
                 .andExpect(status().isForbidden());
     }
 
@@ -134,21 +134,21 @@ class SecurityAccessIntegrationTest {
 
     @Test
     void adminNotes_shouldReturn401_whenUnauthenticated() throws Exception {
-        mockMvc.perform(get("/api/notes/admin"))
+        mockMvc.perform(get("/api/notes/all-notes"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     @WithMockUser(username = "student1", roles = {"STUDENT"})
     void adminNotes_shouldReturn403_forStudentRole() throws Exception {
-        mockMvc.perform(get("/api/notes/admin"))
+        mockMvc.perform(get("/api/notes/all-notes"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(username = "admin1", roles = {"UNIVERSITY_ADMIN"})
     void adminNotes_shouldReturn200_forAdminRole() throws Exception {
-        mockMvc.perform(get("/api/notes/admin"))
+        mockMvc.perform(get("/api/notes/all-notes"))
                 .andExpect(status().isOk());
     }
 }
