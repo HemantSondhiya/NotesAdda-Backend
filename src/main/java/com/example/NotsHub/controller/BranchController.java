@@ -60,13 +60,21 @@ public class BranchController {
         Page<SemesterSummaryItem> summary = semesters.map(s -> new SemesterSummaryItem(
                 s.getId(),
                 s.getNumber(),
-                s.getSemester()
+                s.getSemester(),
+                s.getSubjectsCountTotal()
         ));
+        long subjectsCountTotal = summary.getContent()
+                .stream()
+                .map(SemesterSummaryItem::subjectsCountTotal)
+                .filter(count -> count != null)
+                .mapToLong(Long::longValue)
+                .sum();
         PagedResponse<SemesterSummaryItem> paged = PagedResponse.from(summary);
         return ResponseEntity.ok(
                 new APIResponse("Semesters retrieved successfully for branch", true, Map.of(
                         "semesters", paged,
-                        "semestersCountTotal", summary.getTotalElements()
+                        "semestersCountTotal", summary.getTotalElements(),
+                        "subjectsCountTotal", subjectsCountTotal
                 ))
         );
     }
@@ -98,6 +106,6 @@ public class BranchController {
         );
     }
 
-    private record SemesterSummaryItem(UUID id, Short number, String semester) {
+    private record SemesterSummaryItem(UUID id, Short number, String semester, Long subjectsCountTotal) {
     }
 }

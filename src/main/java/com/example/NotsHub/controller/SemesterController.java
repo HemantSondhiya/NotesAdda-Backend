@@ -51,6 +51,7 @@ public class SemesterController {
         Page<SubjectSummaryItem> summary = subjects.map(s -> new SubjectSummaryItem(
                 s.getId(),
                 s.getName(),
+                s.getSlug(),
                 s.getCode(),
                 s.getNotesCountTotal()
         ));
@@ -79,6 +80,6 @@ public class SemesterController {
         return ResponseEntity.ok(new APIResponse<>("Semester updated successfully", true, updated));
     }
 
-    private record SubjectSummaryItem(UUID id, String name, String code, Long notesCountTotal) {
+    private record SubjectSummaryItem(UUID id, String name, String slug, String code, Long notesCountTotal) {
     }
 }
