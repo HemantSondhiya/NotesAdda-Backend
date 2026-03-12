@@ -139,6 +139,12 @@ class SecurityAccessIntegrationTest {
     }
 
     @Test
+    void semesterSubjects_shouldNotRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/semesters/{id}/subjects", "6730fd14-b6b6-460e-8ec2-a0bf7d00f216"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @WithMockUser(username = "student1", roles = {"STUDENT"})
     void adminNotes_shouldReturn403_forStudentRole() throws Exception {
         mockMvc.perform(get("/api/notes/all-notes"))

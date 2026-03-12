@@ -227,8 +227,8 @@ public class NotesServiceImpl implements NotesService {
         return Map.of("viewUrl", viewUrl);
     }
 
-    @Override
     @Transactional(readOnly = true)
+    @Override
     public Page<NotesDTO> getAllNotes(int page, int size) {
         return notesRepository.findByIsApprovedTrue(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .map(this::mapToDTO);

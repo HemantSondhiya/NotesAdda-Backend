@@ -60,6 +60,7 @@ public class NotesController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
     public ResponseEntity<?> getAllNotes(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String query,
