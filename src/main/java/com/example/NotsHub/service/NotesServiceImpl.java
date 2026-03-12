@@ -391,7 +391,7 @@ public class NotesServiceImpl implements NotesService {
     public Page<NotesDTO> searchNotes(String query, int page, int size) {
         String normalizedQuery = query == null ? "" : query.trim();
         if (normalizedQuery.isEmpty()) {
-            return getAllNotes(page, size);
+            return getAllNotes(page, size).map(this::sanitizeForSearchResponse);
         }
 
         return notesRepository.findByIsApprovedTrueAndTitleContainingIgnoreCaseOrIsApprovedTrueAndDescriptionContainingIgnoreCase(
@@ -399,7 +399,8 @@ public class NotesServiceImpl implements NotesService {
                         normalizedQuery,
                         PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))
                 )
-                .map(this::mapToDTO);
+                .map(this::mapToDTO)
+                .map(this::sanitizeForSearchResponse);
     }
 
     @Override
@@ -479,6 +480,19 @@ public class NotesServiceImpl implements NotesService {
         if (notes.getSubject() != null) {
             dto.setSubjectId(notes.getSubject().getId());
             dto.setSubjectName(notes.getSubject().getName());
+            dto.setSubjectSlug(notes.getSubject().getSlug());
+            if (notes.getSubject().getSemester() != null) {
+                dto.setSemesterNumber(notes.getSubject().getSemester().getNumber());
+                if (notes.getSubject().getSemester().getBranch() != null) {
+                    dto.setBranchSlug(notes.getSubject().getSemester().getBranch().getSlug());
+                    if (notes.getSubject().getSemester().getBranch().getProgram() != null) {
+                        dto.setProgramSlug(notes.getSubject().getSemester().getBranch().getProgram().getSlug());
+                        if (notes.getSubject().getSemester().getBranch().getProgram().getUniversity() != null) {
+                            dto.setUniversitySlug(notes.getSubject().getSemester().getBranch().getProgram().getUniversity().getSlug());
+                        }
+                    }
+                }
+            }
         }
         if (notes.getId() != null) {
             dto.setDownloadUrl("/api/notes/" + notes.getId() + "/download");
@@ -501,6 +515,16 @@ public class NotesServiceImpl implements NotesService {
             dto.setApprovedByEmail(notes.getApprovedBy().getEmail());
         }
 
+        return dto;
+    }
+
+    private NotesDTO sanitizeForSearchResponse(NotesDTO dto) {
+        dto.setRejectionNote(null);
+        dto.setApprovedById(null);
+        dto.setApprovedByEmail(null);
+        dto.setViewUrl(null);
+        dto.setDownloadUrl(null);
+        dto.setFileType(null);
         return dto;
     }
 }

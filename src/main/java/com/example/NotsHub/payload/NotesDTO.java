@@ -1,6 +1,7 @@
 package com.example.NotsHub.payload;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -9,6 +10,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class NotesDTO {
     private UUID id;
     private String title;
@@ -30,6 +32,11 @@ public class NotesDTO {
     private LocalDateTime approvedAt;
     private UUID subjectId;
     private String subjectName;
+    private String subjectSlug;
+    private Short semesterNumber;
+    private String branchSlug;
+    private String programSlug;
+    private String universitySlug;
     private UUID uploadedById;
     private String uploaderName;
     private String uploaderEmail;
