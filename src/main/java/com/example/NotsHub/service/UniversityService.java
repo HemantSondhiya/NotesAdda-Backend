@@ -21,4 +21,6 @@ public interface UniversityService {
     UniversityDTO uploadLogo(UUID id, MultipartFile logoFile);
 
     void deleteUniversity(UUID id);
+
+    void deleteUniversityByCode(String code);
 }

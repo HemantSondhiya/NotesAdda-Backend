@@ -107,4 +107,11 @@ public class UniversityController {
         universityService.deleteUniversity(id);
         return ResponseEntity.ok(new APIResponse("University deleted successfully", true, null));
     }
+
+    @DeleteMapping("/code/{code}")
+    @PreAuthorize("hasAnyRole('UNIVERSITY_ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> deleteUniversityByCode(@PathVariable String code) {
+        universityService.deleteUniversityByCode(code);
+        return ResponseEntity.ok(new APIResponse("University deleted successfully by code", true, null));
+    }
 }

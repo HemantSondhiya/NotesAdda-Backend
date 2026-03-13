@@ -25,7 +25,7 @@ public class Branch {
     @Column(nullable = false, length = 150)
     private String name;
 
-    @Column(unique = true)
+    @Column
     private String slug;
 
     @Column(nullable = false, length = 20)

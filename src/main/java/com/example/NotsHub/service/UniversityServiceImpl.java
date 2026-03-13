@@ -163,12 +163,26 @@ public class UniversityServiceImpl implements UniversityService {
     }
 
     @Override
+    @Transactional
     public void deleteUniversity(UUID id) {
         University university = universityRepository.findById(id)
                 .orElseThrow(() -> new APIException("University not found with id: " + id));
 
-        university.setIsActive(false);
-        universityRepository.save(university);
+        universityRepository.delete(university);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUniversityByCode(String code) {
+        String normalizedCode = code == null ? "" : code.trim();
+        if (normalizedCode.isBlank()) {
+            throw new APIException("University code is required");
+        }
+
+        University university = universityRepository.findByCodeIgnoreCase(normalizedCode)
+                .orElseThrow(() -> new APIException("University not found with code: " + normalizedCode));
+
+        universityRepository.delete(university);
     }
 
     private UniversityDTO mapToDTO(University university) {

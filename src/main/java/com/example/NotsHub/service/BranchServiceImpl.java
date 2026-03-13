@@ -56,6 +56,7 @@ public class BranchServiceImpl implements BranchService {
 
         Branch branch = new Branch();
         branch.setName(request.getName());
+        branch.setSlug(SlugUtil.generateSlug(request.getName()));
         branch.setCode(request.getCode());
         branch.setDescription(request.getDescription());
         branch.setProgram(program);
@@ -94,7 +95,11 @@ public class BranchServiceImpl implements BranchService {
             );
         }
 
+        boolean nameChanged = branch.getName() == null || !branch.getName().equalsIgnoreCase(request.getName());
         branch.setName(request.getName());
+        if (nameChanged || branch.getSlug() == null || branch.getSlug().isBlank()) {
+            branch.setSlug(SlugUtil.makeUnique(SlugUtil.generateSlug(request.getName()), branchRepository::existsBySlug));
+        }
         branch.setCode(request.getCode());
         branch.setDescription(request.getDescription());
         branch.setProgram(program);
@@ -135,7 +140,7 @@ public class BranchServiceImpl implements BranchService {
         BranchDTO dto = new BranchDTO();
         dto.setId(branch.getId());
         dto.setName(branch.getName());
-        dto.setSlug(branch.getSlug());
+        dto.setSlug(resolveSlug(branch));
         dto.setCode(branch.getCode());
         dto.setDescription(branch.getDescription());
         dto.setProgramId(branch.getProgram().getId());
@@ -176,12 +181,19 @@ public class BranchServiceImpl implements BranchService {
         BranchDTO dto = new BranchDTO();
         dto.setId(branch.getId());
         dto.setName(branch.getName());
-        dto.setSlug(branch.getSlug());
+        dto.setSlug(resolveSlug(branch));
         dto.setCode(branch.getCode());
         dto.setDescription(branch.getDescription());
         dto.setProgramId(branch.getProgram().getId());
         dto.setSemestersCountTotal(semesterRepository.countByBranchId(branch.getId()));
         dto.setSemesters(new ArrayList<>());
         return dto;
+    }
+
+    private String resolveSlug(Branch branch) {
+        if (branch.getSlug() != null && !branch.getSlug().isBlank()) {
+            return branch.getSlug();
+        }
+        return SlugUtil.generateSlug(branch.getName());
     }
 }

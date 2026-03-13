@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -97,6 +99,27 @@ public class MyGlobalExceptionHandler {
         String message = "File is too large. Maximum allowed upload size is 10 MB.";
         APIResponse<?> apiResponse = new APIResponse<>(message, false, null);
         return new ResponseEntity<>(apiResponse, HttpStatus.PAYLOAD_TOO_LARGE);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<APIResponse<?>> handleNoResourceFoundException(NoResourceFoundException e) {
+        APIResponse<?> apiResponse = new APIResponse<>(
+                "Resource not found: " + e.getResourcePath(), false, null);
+        return new ResponseEntity<>(apiResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<APIResponse<?>> handleMissingServletRequestPartException(MissingServletRequestPartException e) {
+        APIResponse<?> apiResponse = new APIResponse<>(
+                "Required request part '" + e.getRequestPartName() + "' is not present", false, null);
+        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<APIResponse<?>> handleHttpMessageNotReadableException(org.springframework.http.converter.HttpMessageNotReadableException e) {
+        APIResponse<?> apiResponse = new APIResponse<>(
+                "Malformed JSON request or invalid data format", false, null);
+        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)

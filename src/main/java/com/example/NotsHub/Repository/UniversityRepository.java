@@ -14,6 +14,7 @@ public interface UniversityRepository extends JpaRepository<University, UUID> {
     boolean existsByCode(String code);
     boolean existsBySlug(String slug);
     Optional<University> findBySlug(String slug);
+    Optional<University> findByCodeIgnoreCase(String code);
     Page<University> findByIsActiveTrue(Pageable pageable);
 
     @Query("""
