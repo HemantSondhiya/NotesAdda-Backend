@@ -13,6 +13,7 @@ import java.util.UUID;
 
 public interface NotesService {
 
+    String enqueuePdfUpload(String title, String description, UUID subjectId, MultipartFile file, String uploaderUsername);
     NotesDTO uploadPdfNote(String title, String description, UUID subjectId, MultipartFile file, String uploaderUsername);
     NotesDTO updateNotes(UUID notesId, @Valid NotesUpdateRequest request, String updaterUsername);
     NotesDTO approveNotes(UUID notesId, String approverUsername);

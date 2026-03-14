@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/notes")
@@ -46,8 +47,12 @@ public class NotesController {
             @RequestParam("subjectId") UUID subjectId,
             @RequestPart("file") MultipartFile file,
             Authentication authentication) {
-        NotesDTO notesDTO = notesService.uploadPdfNote(title, description, subjectId, file, authentication.getName());
-        return ResponseEntity.ok(new APIResponse<>("PDF uploaded successfully", true, notesDTO));
+        String requestId = notesService.enqueuePdfUpload(title, description, subjectId, file, authentication.getName());
+        return ResponseEntity.accepted().body(new APIResponse<>(
+                "PDF accepted for processing",
+                true,
+                Map.of("requestId", requestId, "status", "PROCESSING")
+        ));
     }
 
     @PutMapping("/{id}")

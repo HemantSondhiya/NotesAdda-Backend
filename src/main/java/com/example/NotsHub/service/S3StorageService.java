@@ -15,15 +15,18 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.UUID;
 
 @Service
 public class S3StorageService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3StorageService.class);
-    private static final long MAX_PDF_SIZE_BYTES = 10L * 1024L * 1024L;
+    private static final long MAX_PDF_SIZE_BYTES = 25L * 1024L * 1024L;
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
@@ -214,6 +217,39 @@ public class S3StorageService {
         }
     }
 
+    public String calculateSha256ForObject(String key) {
+        try (InputStream in = downloadFileStream(key)) {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            int read;
+
+            while ((read = in.read(buffer)) != -1) {
+                digest.update(buffer, 0, read);
+            }
+
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (Exception e) {
+            throw new APIException("Unable to calculate file checksum");
+        }
+    }
+
+    public InputStream downloadFileStream(String key) {
+        ensureBucketConfigured();
+        if (key == null || key.isBlank()) {
+            throw new APIException("File key is required");
+        }
+
+        try {
+            return s3Client.getObject(GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build());
+        } catch (Exception e) {
+            LOGGER.error("Failed to download PDF from S3: bucket={}, key={}", bucketName, key, e);
+            throw new APIException("Failed to open file stream from S3");
+        }
+    }
+
     public String extractManagedKeyFromS3Url(String fileUrl) {
         if (fileUrl == null || fileUrl.isBlank()) {
             return null;
@@ -268,7 +304,7 @@ public class S3StorageService {
             throw new APIException("PDF file is required");
         }
         if (file.getSize() > MAX_PDF_SIZE_BYTES) {
-            throw new APIException("PDF size must be 10MB or less");
+            throw new APIException("PDF size must be 25MB or less");
         }
         if (file.getOriginalFilename() == null || !file.getOriginalFilename().toLowerCase().endsWith(".pdf")) {
             throw new APIException("Only PDF files are allowed");
@@ -293,7 +329,7 @@ public class S3StorageService {
             throw new APIException("PDF file is required");
         }
         if (bytes.length > MAX_PDF_SIZE_BYTES) {
-            throw new APIException("PDF size must be 10MB or less");
+            throw new APIException("PDF size must be 25MB or less");
         }
         if (bytes.length < 5) {
             throw new APIException("Invalid PDF file content");

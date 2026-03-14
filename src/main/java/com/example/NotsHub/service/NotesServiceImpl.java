@@ -13,6 +13,7 @@ import com.example.NotsHub.payload.NotesDTO;
 import com.example.NotsHub.payload.NotesUpdateRequest;
 import com.example.NotsHub.util.SlugUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -45,7 +47,63 @@ public class NotesServiceImpl implements NotesService {
     @Autowired
     private PdfCompressionService pdfCompressionService;
 
+    @Autowired
+    private NotesUploadProcessingService notesUploadProcessingService;
 
+
+
+    @Override
+    public String enqueuePdfUpload(String title, String description, UUID subjectId, MultipartFile file, String uploaderUsername) {
+        if (title == null || title.isBlank()) {
+            throw new APIException("Notes title is required");
+        }
+        if (subjectId == null) {
+            throw new APIException("Subject id is required");
+        }
+
+        Subject subject = subjectRepository.findById(subjectId)
+                .orElseThrow(() -> new APIException("Subject not found with id: " + subjectId));
+        User uploader = userRepository.findByUserName(uploaderUsername)
+                .orElseThrow(() -> new APIException("User not found: " + uploaderUsername));
+
+        boolean autoApprove = isAdmin(uploader);
+        S3StorageService.UploadResult uploadResult = autoApprove
+                ? s3StorageService.uploadPdf(file, uploaderUsername)
+                : s3StorageService.uploadPdfToPending(file, uploaderUsername);
+
+        Notes notes = new Notes();
+        notes.setTitle(title.trim());
+        notes.setDescription(description);
+        notes.setFileUrl(uploadResult.fileUrl());
+        notes.setFileKey(uploadResult.fileKey());
+        notes.setFileType("PDF");
+        notes.setSlug(SlugUtil.makeUnique(SlugUtil.generateSlug(title.trim()), notesRepository::existsBySlug));
+        notes.setSubject(subject);
+        notes.setUploadedBy(uploader);
+        if (autoApprove) {
+            notes.setIsApproved(true);
+            notes.setApprovedBy(uploader);
+            notes.setApprovedAt(LocalDateTime.now());
+        } else {
+            notes.setIsApproved(false);
+        }
+
+        Notes saved;
+        try {
+            saved = notesRepository.save(notes);
+        } catch (RuntimeException ex) {
+            s3StorageService.deleteFile(uploadResult.fileKey());
+            throw ex;
+        }
+
+        String requestId = UUID.randomUUID().toString();
+        try {
+            notesUploadProcessingService.processUploadedNoteAsync(requestId, saved.getId());
+        } catch (TaskRejectedException ex) {
+            // Upload is already persisted; skip optional background enrichment if queue is saturated.
+        }
+        return requestId;
+    }
 
     @Override
     public NotesDTO uploadPdfNote(String title, String description, UUID subjectId, MultipartFile file, String uploaderUsername) {
@@ -427,15 +485,7 @@ public class NotesServiceImpl implements NotesService {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(content);
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
+            return HexFormat.of().formatHex(hash);
         } catch (Exception e) {
             throw new APIException("Failed to calculate file checksum");
         }

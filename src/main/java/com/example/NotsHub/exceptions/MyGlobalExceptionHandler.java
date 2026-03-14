@@ -3,6 +3,7 @@ package com.example.NotsHub.exceptions;
 import com.example.NotsHub.payload.APIResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -24,6 +25,9 @@ import java.util.Map;
 @RestControllerAdvice
 public class MyGlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(MyGlobalExceptionHandler.class);
+
+    @Value("${app.upload.max-file-size:25MB}")
+    private String maxUploadSize;
 
     // ── Validation errors (@Valid) ───────────────────────────
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -96,7 +100,7 @@ public class MyGlobalExceptionHandler {
 
     @ExceptionHandler({MaxUploadSizeExceededException.class, MultipartException.class})
     public ResponseEntity<APIResponse<?>> handleMultipartSizeException(Exception e) {
-        String message = "File is too large. Maximum allowed upload size is 10 MB.";
+        String message = "File is too large. Maximum allowed upload size is " + maxUploadSize + ".";
         APIResponse<?> apiResponse = new APIResponse<>(message, false, null);
         return new ResponseEntity<>(apiResponse, HttpStatus.PAYLOAD_TOO_LARGE);
     }
